@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>일별 교육 진행 현황</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        @media (min-width: 1536px) {
+            ::-webkit-scrollbar {
+                width: 14px;
+                height: 14px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                border-radius: 7px;
+            }
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-modalFadeIn {
+            animation: modalFadeIn 0.2s ease-out forwards;
+        }
+
+        .pt-safe-4 {
+            padding-top: calc(0.5rem + env(safe-area-inset-top)) !important;
+        }
+
+        .word-chip {
+            transition: all 0.2s ease-in-out;
+            cursor: default;
+        }
+
+        .word-chip:hover {
+            transform: scale(1.1);
+            filter: brightness(0.9);
+        }
+
+        .gauge-path {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+
+        /* 모바일 네이티브 달력 아이콘 클릭 영역 확장 */
+        input[type="date"].opacity-0::-webkit-calendar-picker-indicator {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            width: auto;
+            height: auto;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* 가로 스크롤바 숨기기 (혹시 모를 스크롤 방지) */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-950 font-sans text-slate-100 min-h-screen relative overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+
+    <div id="globalLoader"
+        class="fixed inset-0 bg-black/80 z-[10000] hidden flex-col items-center justify-center backdrop-blur-md transition-opacity duration-300">
+        <div
+            class="bg-slate-800/80 backdrop-blur-xl border border-white/10 px-10 py-8 rounded-3xl shadow-2xl flex flex-col items-center transform scale-100 animate-modalFadeIn">
+            <svg class="w-16 h-16 text-indigo-400 animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <div class="text-2xl font-bold text-slate-100 tracking-tight">데이터를 읽고 있습니다...</div>
+            <div class="text-indigo-300 font-medium mt-2 animate-pulse">잠시만 기다려주세요</div>
+        </div>
+    </div>
+
+    <!-- 헤더 영역 -->
+    <header
+        class="bg-slate-900/60 backdrop-blur-xl border-b border-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)] mb-2 relative z-20">
+        <div
+            class="w-[98%] max-w-[2400px] mx-auto px-[clamp(4px,1vw,16px)] pb-[clamp(6px,1vw,16px)] pt-safe-4 flex flex-row items-center justify-between gap-[clamp(2px,1vw,16px)] flex-nowrap">
+
+            <!-- Left Side: Titles -->
+            <div class="flex flex-col items-start text-left shrink min-w-0">
+                <div class="flex items-center mb-[clamp(2px,0.5vw,4px)] shrink min-w-0">
+                    <img src="Logo_of_Seoul.png" alt="서울시 로고"
+                        class="h-[clamp(14px,3vw,48px)] bg-slate-800/80 border border-white/10 px-[clamp(2px,0.5vw,8px)] py-[clamp(2px,0.5vw,4px)] rounded-[clamp(2px,0.5vw,6px)] object-contain mr-[clamp(4px,1vw,8px)] shrink-0 shadow-lg"
+                        onerror="this.style.display='none'">
+                    <h1
+                        class="font-bold text-[clamp(11px,2.5vw,36px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
+                        성동노인종합복지관</h1>
+                </div>
+                <p
+                    class="font-bold text-yellow-300 text-[clamp(10px,2.2vw,30px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
+                    디지털교육 서포터즈</p>
+                <h1
+                    class="font-bold mt-[clamp(4px,1vw,20px)] flex items-center justify-start gap-[clamp(2px,1vw,16px)] text-[clamp(12px,3.2vw,48px)] whitespace-nowrap leading-none shrink min-w-0 overflow-hidden">
+                    <svg class="w-[clamp(12px,3.2vw,48px)] h-[clamp(12px,3.2vw,48px)] text-white shrink-0"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                        <line x1="16" x2="16" y1="2" y2="6" />
+                        <line x1="8" x2="8" y1="2" y2="6" />
+                        <line x1="3" x2="21" y1="10" y2="10" />
+                    </svg>
+                    <span class="shrink min-w-0 truncate">일별 교육 진행 현황</span>
+                    <span id="syncIndicator"
+                        class="ml-1 w-[clamp(6px,1vw,12px)] h-[clamp(6px,1vw,12px)] bg-green-400 rounded-full animate-pulse opacity-0 transition-opacity shrink-0"
+                        title="동기화 중"></span>
+                </h1>
+            </div>
+
+            <!-- Right Side: Controls -->
+            <div
+                class="flex flex-row flex-nowrap items-center justify-end ml-auto gap-[clamp(4px,1vw,16px)] shrink min-w-0">
+                <!-- Date Navigation Group -->
+                <div id="dateNavigation"
+                    class="hidden flex flex-row flex-nowrap items-center justify-center gap-[clamp(2px,0.5vw,16px)] bg-slate-800/50 p-[clamp(2px,0.8vw,12px)] rounded-[clamp(4px,1vw,12px)] border-[1.5px] border-indigo-500/50 shadow-inner shrink min-w-0">
+                    <button id="prevDayBtn"
+                        class="flex items-center justify-center text-slate-400 hover:text-indigo-300 active:scale-95 transition-all shrink-0 px-[clamp(2px,0.5vw,8px)]">
+                        <svg class="w-[clamp(8px,2vw,24px)] h-[clamp(8px,2vw,24px)]" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" />
+                        </svg>
+                    </button>
+
+                    <div
+                        class="relative flex items-center justify-center bg-slate-800 rounded-[clamp(3px,0.8vw,8px)] border border-slate-600 hover:border-indigo-400 transition-colors shadow-sm shrink min-w-0 overflow-hidden group">
+                        <input type="date" id="datePickerInput"
+                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="날짜 변경">
+                        <span id="currentDateDisplay"
+                            class="w-[clamp(42px,10vw,140px)] bg-transparent text-center text-indigo-300 font-black text-[clamp(8px,1.6vw,24px)] tracking-tighter px-[clamp(2px,1vw,20px)] py-[clamp(2px,0.8vw,12px)] shrink min-w-0 whitespace-nowrap group-hover:text-indigo-200 transition-all drop-shadow-[0_0_8px_rgba(165,180,252,0.5)]"></span>
+                    </div>
+
+                    <!-- 오늘 버튼 -->
+                    <button id="todayBtn"
+                        class="px-[clamp(6px,1.5vw,32px)] py-[clamp(2px,0.8vw,12px)] bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-[clamp(3px,0.8vw,8px)] transition-colors shadow-md shadow-indigo-500/30 active:scale-95 text-[clamp(9px,1.8vw,24px)] whitespace-nowrap shrink-0">오늘</button>
+
+                    <button id="nextDayBtn"
+                        class="flex items-center justify-center text-slate-400 hover:text-indigo-300 active:scale-95 transition-all shrink-0 px-[clamp(2px,0.5vw,8px)]">
+                        <svg class="w-[clamp(8px,2vw,24px)] h-[clamp(8px,2vw,24px)]" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Square Buttons -->
+                <div class="flex flex-nowrap items-center gap-[clamp(4px,1vw,16px)] shrink-0">
+                    <div class="relative flex flex-col items-center">
+                        <button id="refreshDataBtn"
+                            class="flex flex-col items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 p-[clamp(3px,1vw,16px)] rounded-[clamp(4px,1vw,16px)] shadow-lg transition-all active:scale-95 min-w-[clamp(35px,5vw,120px)] shrink-0">
+                            <svg class="w-[clamp(12px,2.5vw,40px)] h-[clamp(12px,2.5vw,40px)] mb-[clamp(1px,0.2vw,4px)] shrink-0"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357-2H15" />
+                            </svg>
+                            <span class="font-bold text-[clamp(7.5px,1.3vw,20px)] whitespace-nowrap">읽어오기</span>
+                        </button>
+                        <span id="refreshMsg"
+                            class="absolute top-full mt-1 text-white font-bold text-[clamp(10px,2vw,14px)] whitespace-nowrap opacity-0 transition-opacity duration-300 pointer-events-none drop-shadow z-50 bg-black/60 px-2 py-1 rounded">읽는
+                            중...</span>
+                    </div>
+
+                    <a href="index.html"
+                        class="flex flex-col items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 p-[clamp(3px,1vw,16px)] rounded-[clamp(4px,1vw,16px)] shadow-lg transition-all active:scale-95 min-w-[clamp(35px,5vw,120px)] shrink-0 no-underline">
+                        <svg class="w-[clamp(12px,2.5vw,40px)] h-[clamp(12px,2.5vw,40px)] mb-[clamp(1px,0.2vw,4px)] shrink-0"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                        <span class="font-bold text-[clamp(7.5px,1.3vw,20px)] whitespace-nowrap">처음으로</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-[98%] max-w-[2400px] mx-auto space-y-[clamp(8px,1vw,16px)] px-2">
+        <div id="setupState"
+            class="hidden bg-slate-900/60 backdrop-blur-xl p-[clamp(32px,3vw,48px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col items-center justify-center min-h-[400px]">
+            <div class="max-w-2xl 2xl:max-w-5xl w-full">
+                <h2
+                    class="font-bold text-slate-100 mb-[clamp(16px,2vw,24px)] text-center text-[clamp(24px,3vw,48px)] tracking-tight">
+                    구글 시트 연동 설정</h2>
+                <div class="space-y-[clamp(16px,2vw,32px)] mb-8">
+                    <div
+                        class="bg-indigo-900/40 border border-indigo-500/30 text-indigo-200 p-4 rounded-xl text-[clamp(13px,1.2vw,16px)] leading-relaxed shadow-sm backdrop-blur-md">
+                        <p class="font-bold mb-1 flex items-center gap-2"><span class="text-xl">💡</span> 구글 시트 접근 권한을 꼭
+                            확인해주세요!</p>
+                        <p class="opacity-90">각 구글 시트 우측 상단의 <b>[공유]</b> 버튼을 눌러 일반 액세스를 <b>'링크가 있는 모든 사용자(뷰어)'</b>로
+                            변경해야만 데이터를 성공적으로 불러올 수 있습니다.</p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">1팀 주소</label>
+                        <input type="text" id="url1"
+                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">2팀 주소</label>
+                        <input type="text" id="url2"
+                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">3팀 주소</label>
+                        <input type="text" id="url3"
+                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
+                    </div>
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button id="fetchDataBtn"
+                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[clamp(16px,1.5vw,24px)] shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all font-bold">저장
+                        및 업데이트</button>
+                    <button id="hideSetupBtn"
+                        class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-[clamp(16px,1.5vw,24px)] transition-all border border-slate-600">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardContent" class="space-y-[clamp(8px,1vw,16px)] pb-4">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-[clamp(8px,1vw,16px)]">
+                <div id="kpiCardTeacher"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-lg border border-white/10 cursor-pointer flex flex-col hover:border-indigo-500/50 hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all active:scale-95 group">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)] pointer-events-none">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-indigo-500/20 rounded-lg text-indigo-400 border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-colors shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">출근한 선생님</p>
+                            <p
+                                class="font-black text-slate-100 leading-none tracking-tight text-[clamp(30px,3vw,48px)] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+                                <span id="kpiTeacher">-</span><span
+                                    class="ml-1 text-slate-500 font-medium text-[clamp(16px,1.5vw,24px)]">명</span></p>
+                        </div>
+                    </div>
+                    <div id="gaugeTeacher" class="w-full flex-grow flex items-start text-slate-300"></div>
+                </div>
+
+                <div id="kpiCardTrainee"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-lg border border-white/10 cursor-pointer flex flex-col hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all active:scale-95 group">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)] pointer-events-none">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-emerald-500/20 rounded-lg text-emerald-400 border border-emerald-500/30 group-hover:bg-emerald-500/30 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">교육 대상자 수</p>
+                            <p
+                                class="font-black text-slate-100 leading-none tracking-tight text-[clamp(30px,3vw,48px)] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+                                <span id="kpiTrainee">-</span><span
+                                    class="ml-1 text-slate-500 font-medium text-[clamp(16px,1.5vw,24px)]">명</span></p>
+                        </div>
+                    </div>
+                    <div id="gaugeTrainee" class="w-full flex-grow flex items-start text-slate-300"></div>
+                </div>
+
+                <div id="kpiCardSchedule"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-lg border border-white/10 cursor-pointer flex flex-col hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] transition-all active:scale-95 group">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)] pointer-events-none">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-purple-500/20 rounded-lg text-purple-400 border border-purple-500/30 group-hover:bg-purple-500/30 transition-colors shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                                <line x1="16" x2="16" y1="2" y2="6" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">일정 수</p>
+                            <p
+                                class="font-black text-slate-100 leading-none tracking-tight text-[clamp(30px,3vw,48px)] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+                                <span id="kpiSchedule">-</span><span
+                                    class="ml-1 text-slate-500 font-medium text-[clamp(16px,1.5vw,24px)]">건</span></p>
+                        </div>
+                    </div>
+                    <div id="gaugeSchedule" class="w-full flex-grow flex items-start text-slate-300"></div>
+                </div>
+
+                <div id="kpiCardSession"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-lg border border-white/10 cursor-pointer flex flex-col hover:border-amber-500/50 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all active:scale-95 group">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)] pointer-events-none">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-amber-500/20 rounded-lg text-amber-500 border border-amber-500/30 group-hover:bg-amber-500/30 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원</p>
+                            <p
+                                class="font-black text-slate-100 leading-none tracking-tight text-[clamp(30px,3vw,48px)] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+                                <span id="kpiSession">-</span><span
+                                    class="ml-1 text-slate-500 font-medium text-[clamp(16px,1.5vw,24px)]">명</span></p>
+                        </div>
+                    </div>
+                    <div id="gaugeSession" class="w-full flex-grow flex items-start text-slate-300"></div>
+                </div>
+            </div>
+
+            <div
+                class="bg-slate-900/60 backdrop-blur-xl p-[clamp(8px,1vw,16px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col w-full overflow-hidden">
+                <h3 class="font-bold text-slate-100 mb-2 border-b border-white/10 pb-1 flex items-center justify-between cursor-pointer select-none text-[clamp(18px,1.8vw,30px)]"
+                    onclick="toggleSection('team12GridContainer', 'icon-grid-12')">
+                    <div class="flex items-center gap-2"><span
+                            class="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]">☀️</span> 1, 2팀 일정 한눈에 보기
+                    </div>
+                    <svg id="icon-grid-12"
+                        class="w-[clamp(20px,2vw,32px)] h-[clamp(20px,2vw,32px)] text-slate-400 transition-transform duration-200 transform rotate-180"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </h3>
+                <div id="team12GridContainer" class="w-full transition-all duration-300">
+                    <div class="text-slate-400 text-center py-10 text-[clamp(16px,1.5vw,24px)] animate-pulse">일정을 불러오는
+                        중입니다...</div>
+                </div>
+            </div>
+
+            <div
+                class="bg-slate-900/60 backdrop-blur-xl p-[clamp(8px,1vw,16px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col w-full overflow-hidden">
+                <h3 class="font-bold text-slate-100 mb-2 border-b border-white/10 pb-1 flex items-center justify-between cursor-pointer select-none text-[clamp(18px,1.8vw,30px)]"
+                    onclick="toggleSection('team3GridContainer', 'icon-grid-3')">
+                    <div class="flex items-center gap-2"><span
+                            class="text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]">🌙</span> 3팀 일정 한눈에 보기
+                    </div>
+                    <svg id="icon-grid-3"
+                        class="w-[clamp(20px,2vw,32px)] h-[clamp(20px,2vw,32px)] text-slate-400 transition-transform duration-200 transform rotate-180"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </h3>
+                <div id="team3GridContainer" class="w-full transition-all duration-300">
+                    <div class="text-slate-400 text-center py-10 text-[clamp(16px,1.5vw,24px)] animate-pulse">일정을 불러오는
+                        중입니다...</div>
+                </div>
+            </div>
+
+            <div
+                class="bg-slate-900/60 backdrop-blur-xl p-[clamp(8px,1vw,16px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
+                <h3 class="font-bold text-slate-100 mb-2 border-b border-white/10 pb-1 flex items-center justify-between cursor-pointer select-none text-[clamp(18px,1.8vw,30px)]"
+                    onclick="toggleSection('wordCloudContainer', 'icon-cloud')">
+                    <div class="flex items-center gap-2"><span
+                            class="text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]">📱</span> 오늘의 핵심 교육 키워드
+                    </div>
+                    <svg id="icon-cloud"
+                        class="w-[clamp(20px,2vw,32px)] h-[clamp(20px,2vw,32px)] text-slate-400 transition-transform duration-200 transform rotate-180"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </h3>
+                <div id="wordCloudContainer"
+                    class="min-h-[120px] 2xl:min-h-[220px] flex flex-wrap justify-center items-center gap-[clamp(12px,1.5vw,24px)] p-4 transition-all duration-300">
+                    <div class="text-slate-400 animate-pulse text-[clamp(16px,1.5vw,24px)]">교육 내역을 분석하고 있습니다...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 기존 디테일 정보 표시 모달 -->
+    <div id="kpiModal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 px-4">
+        <div
+            class="bg-slate-900 rounded-2xl 2xl:rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-white/10 max-w-6xl w-[95%] flex flex-col overflow-hidden animate-modalFadeIn modal-container">
+            <div
+                class="bg-gradient-to-r from-indigo-900 to-slate-900 border-b border-indigo-500/30 py-[clamp(12px,1.5vw,24px)] px-[clamp(20px,2vw,32px)] flex justify-between items-center text-white">
+                <h3 id="kpiModalTitle" class="font-bold text-[clamp(18px,2vw,30px)] text-indigo-100 tracking-tight">상세
+                    내역</h3>
+                <button id="closeKpiModalBtn" class="hover:text-indigo-300 transition-colors pointer-events-auto">
+                    <svg class="w-[clamp(24px,2.5vw,40px)] h-[clamp(24px,2.5vw,40px)] drop-shadow-lg" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="kpiModalContent"
+                class="p-[clamp(12px,1.5vw,24px)] max-h-[75vh] overflow-y-auto bg-slate-900 flex flex-col gap-[clamp(8px,1vw,16px)] transform-gpu will-change-transform overscroll-contain">
+            </div>
+            <div class="p-4 bg-slate-800/80 border-t border-white/10"><button id="closeKpiModalBtn2"
+                    class="w-full py-[clamp(12px,1.5vw,20px)] bg-slate-700/80 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-white transition-colors text-[clamp(16px,1.5vw,24px)] shadow-lg">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생별 출석 기록 팝업 (5열) -->
+    <div id="sessionModal"
+        class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[10001] px-4 transition-opacity duration-300">
+        <div class="bg-slate-900 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-white/10 flex flex-col max-w-2xl w-full animate-modalFadeIn overflow-hidden"
+            onclick="event.stopPropagation();">
+            <div
+                class="bg-gradient-to-r from-purple-900 to-slate-900 border-b border-purple-500/30 py-3 px-5 flex justify-between items-center text-white">
+                <h3 id="sessionModalTitle" class="font-bold text-[clamp(18px,2vw,24px)] text-purple-100 tracking-tight">
+                    출석 일자</h3>
+                <button id="closeSessionModalBtn" class="hover:text-purple-300 transition-colors pointer-events-auto">
+                    <svg class="w-7 h-7 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 sm:p-5 bg-slate-900 overflow-y-auto max-h-[60vh]">
+                <div id="sessionModalGrid" class="grid grid-cols-5 gap-2 sm:gap-3"></div>
+                <div id="sessionModalEmpty"
+                    class="hidden text-center text-slate-500 py-8 font-bold text-[clamp(16px,1.5vw,24px)]">출석 기록이 없습니다.
+                </div>
+            </div>
+            <div class="p-4 bg-slate-800/80 border-t border-white/10">
+                <button id="closeSessionModalBtn2"
+                    class="w-full py-[clamp(10px,1.2vw,16px)] bg-slate-700/80 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-white transition-colors text-[clamp(16px,1.5vw,24px)] shadow-lg">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        window.showToast = function (message, isError = false) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `px-[clamp(16px,1.5vw,24px)] py-[clamp(12px,1vw,16px)] rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] text-slate-100 font-bold text-[clamp(14px,1.2vw,18px)] transition-all duration-300 transform translate-y-10 opacity-0 flex items-center gap-2 border border-white/10 ${isError ? 'bg-rose-600/90 backdrop-blur-md' : 'bg-slate-800/90 backdrop-blur-md'}`;
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <div>${message}</div>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 6000);
+        };
+
+        window.autoCorrectText = function (text) {
+            if (!text) return text;
+            let corrected = text;
+            corrected = corrected.replace(/유투브|유트브|너튜브/gi, '유튜브');
+            corrected = corrected.replace(/카톡|까톡|오픈채팅/gi, '카카오톡');
+            corrected = corrected.replace(/카카오(?!톡)/gi, '카카오톡');
+            corrected = corrected.replace(/쳇gpt|챗지피티|채지피티|chatgpt/gi, '챗GPT');
+            corrected = corrected.replace(/제미나이|제미나|gemini/gi, '제미나이');
+            corrected = corrected.replace(/스마터폰|핸드폰|휴대폰/gi, '스마트폰');
+            corrected = corrected.replace(/큐오스크|무인기/gi, '키오스크');
+            corrected = corrected.replace(/보이스피싱/gi, '스미싱');
+            corrected = corrected.replace(/wifi/gi, '와이파이');
+            return corrected;
+        };
+
+        let allData = [];
+        let isFetching = false;
+        let currentDateObj = new Date();
+        window.scheduleDetailsMap = {};
+
+        currentDateObj.setHours(0, 0, 0, 0);
+        if (currentDateObj.getDay() === 6) currentDateObj.setDate(currentDateObj.getDate() + 2);
+        else if (currentDateObj.getDay() === 0) currentDateObj.setDate(currentDateObj.getDate() + 1);
+
+        const defaultUrls = [
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=1364276211#gid=1364276211",
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=163438723#gid=163438723",
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=0#gid=0"
+        ];
+
+        const setupState = document.getElementById('setupState');
+        const dashboardContent = document.getElementById('dashboardContent');
+        const fetchDataBtn = document.getElementById('fetchDataBtn');
+        const hideSetupBtn = document.getElementById('hideSetupBtn');
+        const syncIndicator = document.getElementById('syncIndicator');
+        const dateNavigation = document.getElementById('dateNavigation');
+        const currentDateDisplay = document.getElementById('currentDateDisplay');
+        const datePickerInput = document.getElementById('datePickerInput');
+        const kpiModal = document.getElementById('kpiModal');
+        const kpiModalTitle = document.getElementById('kpiModalTitle');
+        const kpiModalContent = document.getElementById('kpiModalContent');
+        const wordCloudContainer = document.getElementById('wordCloudContainer');
+        const inputs = [document.getElementById('url1'), document.getElementById('url2'), document.getElementById('url3')];
+        const refreshDataBtn = document.getElementById('refreshDataBtn');
+        const globalLoader = document.getElementById('globalLoader');
+
+        let currentOpenCategory = null;
+
+        // ✅ 학생 회차 모달 함수
+        window.showSessionModal = function (event, originalIndex, studentName) {
+            event.stopPropagation();
+            const item = allData.find(d => d.originalIndex === originalIndex);
+            if (!item || !item.sessionCounts) return;
+
+            const sessionData = item.sessionCounts.find(sc => sc.name === studentName);
+            if (!sessionData) return;
+
+            const modal = document.getElementById('sessionModal');
+            const title = document.getElementById('sessionModalTitle');
+            const grid = document.getElementById('sessionModalGrid');
+            const emptyMsg = document.getElementById('sessionModalEmpty');
+
+            title.innerHTML = `${studentName}님의 출석 일자 <span class="text-purple-200 ml-1 text-[clamp(14px,1.5vw,20px)]">(${sessionData.count}회)</span>`;
+
+            grid.innerHTML = '';
+            if (sessionData.dates && sessionData.dates.length > 0) {
+                grid.classList.remove('hidden');
+                emptyMsg.classList.add('hidden');
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                sessionData.dates.forEach(d => {
+                    const isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+                    const mm = d.getMonth() + 1;
+                    const dd = d.getDate();
+                    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                    const day = dayNames[d.getDay()];
+
+                    const cell = document.createElement('div');
+                    cell.className = `${isToday ? 'bg-purple-600/40 border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.4)]' : 'bg-slate-800/80 border-slate-600 shadow-sm hover:bg-slate-700'} rounded-lg py-[clamp(8px,1vw,12px)] px-1 text-center text-[clamp(11px,1.1vw,16px)] font-extrabold text-purple-200 flex flex-col justify-center items-center border transition-all`;
+                    cell.innerHTML = `<span>${mm}/${dd}</span><span class="text-[0.85em] opacity-80 mt-0.5">(${day})</span>`;
+                    grid.appendChild(cell);
+                });
+            } else {
+                grid.classList.add('hidden');
+                emptyMsg.classList.remove('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        // 모달 닫기 이벤트 연결
+        document.getElementById('closeSessionModalBtn').onclick = (e) => { e.stopPropagation(); document.getElementById('sessionModal').classList.add('hidden'); document.getElementById('sessionModal').classList.remove('flex'); };
+        document.getElementById('closeSessionModalBtn2').onclick = (e) => { e.stopPropagation(); document.getElementById('sessionModal').classList.add('hidden'); document.getElementById('sessionModal').classList.remove('flex'); };
+        document.getElementById('sessionModal').onclick = () => { document.getElementById('sessionModal').classList.add('hidden'); document.getElementById('sessionModal').classList.remove('flex'); };
+
+        window.showScheduleDetail = function (uid) {
+            const data = window.scheduleDetailsMap[uid];
+            if (!data) return;
+
+            let tDisp = data.target === '-' || data.target === '' ? '대상자 없음' : data.target;
+            let cleanTDispForCheck = tDisp.replace(/\s+/g, '');
+            let isHideBadges = tDisp === '대상자 없음' || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습');
+
+            let statusBadge = '';
+            if (!data.isExcluded && !isHideBadges) {
+                if (data.isPartial) {
+                    let partialText = (data.status || '').includes('취소') ? '취소' : '결석';
+                    let partialBg = partialText === '취소' ? 'bg-amber-600/80 border-amber-500 text-amber-50' : 'bg-rose-600/80 border-rose-500 text-rose-50';
+                    statusBadge = `<div class="flex items-center gap-1"><span class="whitespace-nowrap shrink-0 px-[clamp(10px,1.2vw,14px)] py-[clamp(6px,0.8vw,10px)] rounded-md border border-indigo-400/50 font-black bg-indigo-600/80 text-white shadow-sm text-[clamp(14px,1.4vw,20px)]">출석</span><span class="whitespace-nowrap shrink-0 px-[clamp(10px,1.2vw,14px)] py-[clamp(6px,0.8vw,10px)] rounded-md border ${partialBg} font-black shadow-sm text-[clamp(14px,1.4vw,20px)]">${partialText}</span></div>`;
+                } else {
+                    statusBadge = `<span class="whitespace-nowrap shrink-0 px-[clamp(12px,1.5vw,18px)] py-[clamp(6px,0.8vw,10px)] rounded-md border font-black ${data.badgeClass} shadow-sm text-[clamp(15px,1.5vw,22px)]">${data.displayStatus}</span>`;
+                }
+            }
+
+            let sessionBadgeModalHtml = '';
+            if (data.sessionCounts && !data.isExcluded && !isHideBadges) {
+                sessionBadgeModalHtml = data.sessionCounts.map(sc => {
+                    let sBadgeClass = '';
+                    const count = parseInt(sc.count, 10);
+                    if (count >= 15) sBadgeClass = 'bg-purple-900/60 text-purple-100 border-purple-500/50';
+                    else if (count >= 8) sBadgeClass = 'bg-purple-800/40 text-purple-200 border-purple-400/50';
+                    else sBadgeClass = 'bg-slate-700/60 text-slate-300 border-slate-500/50';
+                    // ✅ 상세 정보 모달에서도 뱃지에 클릭 이벤트를 추가
+                    return `<span onclick="event.stopPropagation(); window.showSessionModal(event, ${data.originalIndex}, '${sc.name}')" class="whitespace-nowrap shrink-0 px-[clamp(12px,1.5vw,18px)] py-[clamp(6px,0.8vw,10px)] rounded-md border font-black ${sBadgeClass} shadow-sm text-[clamp(15px,1.5vw,22px)] cursor-pointer hover:brightness-110 active:scale-95 transition-all">${count}회차</span>`;
+                }).join('<div class="w-1"></div>');
+            }
+
+            const cleanDetailStatus = data.status ? data.status.replace(/\s+/g, '') : '';
+            let memoColor = data.isPartial || data.displayStatus === '결석' || data.displayStatus === '취소' || cleanDetailStatus.includes('결석') || cleanDetailStatus.includes('취소') ? 'text-rose-400 font-bold' : 'text-slate-300';
+            const correctedStatus = window.autoCorrectText(data.status ? data.status.trim() : '');
+
+            let html = `<div class="bg-slate-800/80 backdrop-blur-md rounded-xl p-[clamp(16px,2vw,24px)] space-y-[clamp(12px,1.5vw,16px)] shadow-lg border border-white/10">
+                <div class="flex items-center justify-between border-b border-slate-600 pb-3">
+                    <div class="text-[clamp(18px,2vw,24px)] font-black text-slate-100 drop-shadow">${data.time}</div>
+                    <div class="flex items-center gap-1">${sessionBadgeModalHtml}${statusBadge}</div>
+                </div>
+                <div class="space-y-[clamp(12px,1.5vw,16px)] pt-2 text-[clamp(16px,1.5vw,20px)]">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[clamp(12px,1.2vw,16px)] font-bold text-indigo-400">대상자</span>
+                        <div class="font-black text-slate-200 flex items-center flex-wrap gap-2"><span class="text-[clamp(18px,1.8vw,24px)]">${data.target !== '-' && data.target !== '' ? data.target : '대상자 없음'}</span></div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[clamp(12px,1.2vw,16px)] font-bold text-indigo-400">장소</span>
+                        <div class="font-bold text-[clamp(18px,1.8vw,24px)] text-slate-300 break-keep">${data.location !== '-' && data.location !== '' ? data.location : '미지정'}</div>
+                    </div>
+                    <div class="flex flex-col bg-slate-900/50 p-[clamp(12px,1.5vw,16px)] rounded-lg border border-white/5 mt-2 shadow-inner">
+                        <span class="text-[clamp(12px,1.2vw,16px)] font-bold text-indigo-400 mb-2 border-b border-slate-600 pb-1 inline-block">진행 상세 내역 (메모)</span>
+                        <div class="${memoColor} whitespace-pre-wrap leading-relaxed">${correctedStatus ? correctedStatus : '입력된 내용이 없습니다.'}</div>
+                    </div>
+                </div>
+            </div>`;
+            openKpiModal(`${data.group} 일정 상세`, html, 'scheduleDetail', 1);
+        };
+
+        function openKpiModal(title, htmlContent, category) {
+            if (!kpiModal.classList.contains('hidden') && currentOpenCategory === category) { closeKpiModal(); return; }
+            kpiModalTitle.textContent = title;
+            kpiModalContent.innerHTML = htmlContent;
+
+            const container = kpiModal.querySelector('.modal-container');
+            container.classList.remove('max-w-2xl', 'max-w-3xl', 'max-w-4xl', 'max-w-5xl', 'max-w-6xl', 'max-w-7xl', '2xl:max-w-[70vw]', '2xl:max-w-[80vw]', 'w-[90%]', 'w-[95%]', 'w-[96%]', 'w-[98%]', 'max-w-[96vw]', 'max-w-[85vw]', 'max-w-[95vw]', 'max-w-[98vw]', 'max-w-[1200px]', 'max-w-[1300px]', 'max-w-[1600px]', 'max-w-[1800px]', 'max-w-[800px]');
+
+            if (category === 'scheduleDetail') container.classList.add('w-[90%]', 'max-w-[800px]');
+            else container.classList.add('w-[98%]', 'max-w-[1800px]');
+
+            kpiModal.classList.remove('hidden');
+            currentOpenCategory = category;
+        }
+
+        function closeKpiModal() { kpiModal.classList.add('hidden'); currentOpenCategory = null; }
+
+        document.getElementById('closeKpiModalBtn').onclick = closeKpiModal;
+        document.getElementById('closeKpiModalBtn2').onclick = closeKpiModal;
+
+        // 설정 버튼 관련 기능이 필요 없어짐에 따라 관련 코드 정리
+        hideSetupBtn.onclick = () => { setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden'); };
+
+        window.toggleSection = function (contentId, iconId) {
+            const content = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        };
+
+        function updateDateUI() {
+            const m = currentDateObj.getMonth() + 1;
+            const d = currentDateObj.getDate();
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            currentDateDisplay.textContent = `${m}/${d} (${days[currentDateObj.getDay()]})`;
+
+            const yyyy = currentDateObj.getFullYear();
+            const mm = String(m).padStart(2, '0');
+            const dd = String(d).padStart(2, '0');
+            if (datePickerInput) datePickerInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+        updateDateUI();
+
+        // 날짜 선택기(Smart Calendar) 연결
+        if (datePickerInput) {
+            datePickerInput.addEventListener('change', (e) => {
+                if (!e.target.value) return;
+                const parts = e.target.value.split('-');
+                const selectedDate = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                selectedDate.setHours(0, 0, 0, 0);
+
+                if (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) {
+                    window.showToast("주말(토, 일요일)은 선택할 수 없습니다.", true);
+                    updateDateUI(); // 다시 원래 날짜로 복구
+                    return;
+                }
+
+                if (!isValidDate(selectedDate)) {
+                    let direction = selectedDate > currentDateObj ? 1 : -1;
+                    selectedDate = getNextValidDate(selectedDate, direction);
+                    window.showToast("선택한 날짜가 시트에 없거나 공휴일이어서 유효한 날짜로 이동했습니다.", false);
+                }
+
+                currentDateObj = selectedDate;
+                updateDateUI();
+                if (allData.length > 0) renderDashboard();
+            });
+
+            datePickerInput.addEventListener('click', (e) => {
+                try {
+                    if (e.target.showPicker) e.target.showPicker();
+                } catch (err) { }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
+            inputs[0].value = savedUrls[0] || ''; inputs[1].value = savedUrls[1] || ''; inputs[2].value = savedUrls[2] || '';
+            if (savedUrls.some(url => url.trim() !== '')) {
+                loadDataFromGoogleSheets(savedUrls, false, true);
+                setInterval(() => { if (!document.hidden && !isFetching) loadDataFromGoogleSheets(savedUrls, true, false); }, 300000);
+            } else {
+                setupState.classList.remove('hidden');
+                dashboardContent.classList.add('hidden');
+            }
+        });
+
+        fetchDataBtn.addEventListener('click', () => {
+            const currentUrls = inputs.map(i => i.value.trim());
+            if (currentUrls.every(url => url === '')) return;
+            localStorage.setItem('googleSheetUrls', JSON.stringify(currentUrls));
+            loadDataFromGoogleSheets(currentUrls, false, true);
+            setupState.classList.add('hidden');
+            dashboardContent.classList.remove('hidden');
+        });
+
+        refreshDataBtn.onclick = () => {
+            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
+            if (savedUrls.some(url => url.trim() !== '')) {
+                loadDataFromGoogleSheets(savedUrls, false, false);
+            }
+        };
+
+        function getCsvUrl(url) {
+            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            const gidMatch = url.match(/gid=([0-9]+)/);
+            if (match) {
+                let csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
+                if (gidMatch) csvUrl += `&gid=${gidMatch[1]}`;
+                csvUrl += `&t=${Date.now()}`;
+                return csvUrl;
+            }
+            return null;
+        }
+
+        function processCSVText(text, teamName) {
+            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
+            const data = results.data;
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(10, data.length); i++) {
+                if (data[i] && data[i].length > 3 && data[i][3] && data[i][3].replace(/\s+/g, '') === "구분") {
+                    headerRowIndex = i; break;
+                }
+            }
+            if (headerRowIndex === -1) return;
+
+            const headerRow = data[headerRowIndex];
+            const dateColumns = [];
+            const colDateObjs = {};
+            const currentYear = new Date().getFullYear();
+            
+            const holidayRow1 = data[headerRowIndex + 1] || [];
+            const holidayRow2 = data[headerRowIndex + 2] || [];
+            
+            for (let j = 4; j < headerRow.length; j++) {
+                if (headerRow[j] && headerRow[j].trim() !== '') {
+                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) || 
+                        (holidayRow2[j] && String(holidayRow2[j]).includes('공휴일'))) {
+                        continue;
+                    }
+                    dateColumns.push({ colIndex: j, dateStr: headerRow[j].trim() });
+                    const match = headerRow[j].trim().match(/(\d+)\s*[\/.]\s*(\d+)/);
+                    if (match) {
+                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
+                        d.setHours(0, 0, 0, 0);
+                        colDateObjs[j] = d;
+                    }
+                }
+            }
+
+            const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
+
+            // ✅ 학생별 진행 상태(출결) 및 날짜 목록 저장 로직
+            const getSessionCount = (targetVal, maxColIndex) => {
+                if (!targetVal || targetVal === "-") return null;
+                let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+                if (names.length === 0) return null;
+
+                let results = [];
+
+                names.forEach(searchName => {
+                    if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
+
+                    let count = 0;
+                    let attendedDatesForStudent = []; // 개별 학생 출결 날짜 기록 배열
+
+                    for (let j = 4; j <= maxColIndex; j++) {
+                        let colDate = colDateObjs[j];
+                        if (!colDate) continue;
+
+                        let foundStatuses = [];
+                        for (let i = headerRowIndex + 1; i < data.length; i++) {
+                            if (!data[i] || data[i].length < 2) continue;
+                            let isNewTBlock = (data[i].length > 1 && data[i][1] && data[i][1].trim() !== '');
+                            const cat = (data[i].length > 3 && data[i][3]) ? data[i][3].replace(/\s+/g, '') : "";
+
+                            if (cat === "대상" || cat === "내용" || cat === "활동" || (!cat && isNewTBlock)) {
+                                let statusRow = null;
+                                if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes("진행여부")) statusRow = data[i + 1];
+                                else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes("진행여부")) statusRow = data[i + 2];
+
+                                const cellStudent = data[i][j] ? data[i][j].trim() : "";
+                                const cellStatus = (statusRow && statusRow[j]) ? statusRow[j].trim() : "";
+
+                                const cellNames = cellStudent.split(/[/,]/).map(s => s.trim().split('(')[0].trim()).filter(Boolean);
+                                const nameIdx = cellNames.indexOf(searchName);
+
+                                // `/` 로 엮여있는 복수 학생 중 자신의 상태만 분리하여 추출
+                                if (nameIdx !== -1) {
+                                    let finalStatus = cellStatus;
+                                    if (cellNames.length > 1 && cellStatus.includes('/')) {
+                                        const rawParts = cellStatus.split(',');
+                                        const firstPart = rawParts[0];
+                                        const slashSegments = firstPart.split('/');
+
+                                        if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
+                                            const myTag = slashSegments[nameIdx].trim();
+                                            const memoPart = rawParts.slice(1).join(',').trim();
+                                            finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
+                                        }
+                                    }
+                                    foundStatuses.push(finalStatus);
+                                }
+                            }
+                        }
+
+                        let hasSessionOnThisDay = false;
+                        if (foundStatuses.length > 0) {
+                            const nonEmpty = foundStatuses.filter(s => s !== "");
+                            const statusesToEval = nonEmpty.length > 0 ? nonEmpty : foundStatuses;
+
+                            // 메모 부분 제외, 맨 앞의 '태그' 부분만 추출해서 정확하게 비교
+                            const hasAbsence = statusesToEval.some(s => {
+                                const tagPart = s.split(',')[0].trim();
+                                return tagPart.includes("결석");
+                            });
+
+                            if (hasAbsence) {
+                                hasSessionOnThisDay = false;
+                            } else {
+                                const hasNumber = statusesToEval.some(s => {
+                                    const tagPart = s.split(',')[0].trim();
+                                    return /^[1-9]\d*/.test(tagPart);
+                                });
+
+                                if (hasNumber) {
+                                    hasSessionOnThisDay = true;
+                                } else {
+                                    const isCanceled = statusesToEval.some(s => {
+                                        const tagPart = s.split(',')[0].trim();
+                                        return tagPart.includes("취소") || tagPart.includes("선생님휴가") || tagPart.includes("휴가");
+                                    });
+                                    if (isCanceled) {
+                                        hasSessionOnThisDay = false;
+                                    } else if (colDate < realToday) {
+                                        hasSessionOnThisDay = true;
+                                    } else {
+                                        hasSessionOnThisDay = false;
+                                    }
+                                }
+                            }
+                        }
+                        // 출석한 날짜 기록
+                        if (hasSessionOnThisDay) {
+                            count++;
+                            attendedDatesForStudent.push(colDate);
+                        }
+                    }
+                    if (count > 0) results.push({ name: searchName, count: count, dates: attendedDatesForStudent });
+                });
+                return results.length > 0 ? results : null;
+            };
+
+            let currentGroup = '-'; let currentTeacherName = '이름없음'; let currentTime = '-';
+            for (let i = headerRowIndex + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length < 2) continue;
+                let isNewTeacherBlock = false;
+                if (row[0] && row[0].trim() !== '') currentGroup = row[0].trim();
+                if (row[1] && row[1].trim() !== '') { currentTeacherName = row[1].trim(); isNewTeacherBlock = true; }
+                if (row[2] && row[2].trim() !== '') currentTime = row[2].trim();
+                const category = (row.length > 3 && row[3]) ? row[3].replace(/\s+/g, '') : '';
+                const isTargetRow = category === "대상" || category === "내용" || category === "활동" || (isNewTeacherBlock && category !== "장소" && !category.includes("진행여부"));
+
+                if (isTargetRow) {
+                    let locationRow = null; let statusRow = null;
+                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].replace(/\s+/g, '') === '장소') locationRow = data[i + 1];
+                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes('진행여부')) statusRow = data[i + 1];
+                    else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes('진행여부')) statusRow = data[i + 2];
+
+                    dateColumns.forEach(dateInfo => {
+                        const colIdx = dateInfo.colIndex;
+                        const statusStr = (statusRow && statusRow.length > colIdx && statusRow[colIdx]) ? statusRow[colIdx].trim() : "";
+
+                        let safeStatusStr = String(statusStr).replace(/\s+/g, '');
+                        let teacherAttended = !safeStatusStr.includes('선생님휴가');
+
+                        let isAttended = false; let traineeCount = 0;
+                        if (statusStr) {
+                            const safeStatus = statusStr.replace(/\s+/g, '');
+                            if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || safeStatus.includes('휴가') || ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴'].some(kw => safeStatus.includes(kw)))) {
+                                const match = safeStatus.match(/^(\d+)/);
+                                if (match) { isAttended = true; traineeCount = parseInt(match[1], 10); }
+                            }
+                        }
+                        const cellVal = (row.length > colIdx && row[colIdx]) ? row[colIdx].trim() : "";
+                        const targetVal = cellVal === "" ? "-" : cellVal;
+                        const sessionCounts = getSessionCount(targetVal, colIdx);
+                        allData.push({
+                            team: teamName, group: currentGroup, date: dateInfo.dateStr,
+                            name: currentTeacherName, time: currentTime, target: targetVal,
+                            status: statusStr || "", isAttended, traineeCount, teacherAttended,
+                            location: (locationRow && locationRow.length > colIdx) ? locationRow[colIdx].trim() : "-",
+                            sessionCounts: sessionCounts,
+                            originalIndex: allData.length
+                        });
+                    });
+                }
+            }
+        }
+
+        async function loadDataFromGoogleSheets(urls, isSilent = false, isStartup = false) {
+            if (isFetching) return;
+            isFetching = true;
+
+            if (!isSilent) {
+                globalLoader.classList.remove('hidden');
+                globalLoader.classList.add('flex');
+            } else {
+                syncIndicator.style.opacity = "1";
+                const refreshMsg = document.getElementById('refreshMsg');
+                if (refreshMsg) refreshMsg.style.opacity = "1";
+            }
+
+            allData = [];
+            window.scheduleDetailsMap = {};
+            const teamNames = ["1팀", "2팀", "3팀"];
+            const parsedResults = new Array(urls.length);
+
+            const fetchPromises = urls.map(async (url, i) => {
+                const csvUrl = getCsvUrl(url);
+                if (!csvUrl) return;
+                try {
+                    const res = await fetch(csvUrl);
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    const text = await res.text();
+                    parsedResults[i] = text;
+                } catch (e) {
+                    console.error(`${teamNames[i]} 데이터를 불러오지 못했습니다.`, e);
+                    window.showToast(`${teamNames[i]} 데이터를 불러올 수 없습니다.<br><span class="text-sm font-normal opacity-90 mt-1 block">시트 권한 설정('링크가 있는 모든 사용자')을 확인해주세요.</span>`, true);
+                }
+            });
+            await Promise.all(fetchPromises);
+
+            parsedResults.forEach((text, i) => { if (text) processCSVText(text, teamNames[i]); });
+
+            if (allData.length > 0 && !isValidDate(currentDateObj)) {
+                let forwardDate = getNextValidDate(currentDateObj, 1);
+                if (forwardDate.getTime() > currentDateObj.getTime()) {
+                    currentDateObj = forwardDate;
+                } else {
+                    currentDateObj = getNextValidDate(currentDateObj, -1);
+                }
+                updateDateUI();
+            }
+
+            dateNavigation.classList.remove('hidden');
+            renderDashboard();
+            isFetching = false;
+
+            if (!isSilent) {
+                globalLoader.classList.add('hidden');
+                globalLoader.classList.remove('flex');
+            } else {
+                setTimeout(() => {
+                    syncIndicator.style.opacity = "0";
+                    const refreshMsg = document.getElementById('refreshMsg');
+                    if (refreshMsg) refreshMsg.style.opacity = "0";
+                }, 1000);
+            }
+
+            // 통계 전송 로직이 완전히 삭제되었습니다.
+        }
+
+        function prepareDailyData(targetM, targetD) {
+            let dailyData = allData.filter(item => {
+                const match = item.date.match(/(\d+)[/.](\d+)/);
+                return match && parseInt(match[1]) === targetM && parseInt(match[2]) === targetD;
+            });
+
+            // ✅ 간담회/소양교육 여부 먼저 확인 (전체 선생님 출근 의무일 판정)
+            const isMandatoryDay = dailyData.some(item => {
+                const targetStr = (item.target || '').replace(/\s+/g, '');
+                const locationStr = (item.location || '').replace(/\s+/g, '');
+                return targetStr.includes('간담회') || locationStr.includes('소양교육');
+            });
+
+            const teacherVisibilityMap = new Map();
+            dailyData.forEach(item => {
+                if (item.target && item.target !== '-') {
+                    let cleanNames = item.target.split(/[/, \n]+/).map(n => n.trim()).filter(n => n.length > 0 && n !== '-');
+                    item.target = Array.from(new Set(cleanNames)).join('/');
+                    if (item.target === '') item.target = '-';
+                }
+                const tKey = `${item.team}|${item.group}|${item.name}`;
+                if (!teacherVisibilityMap.has(tKey)) teacherVisibilityMap.set(tKey, false);
+                const tText = (item.target || "").trim();
+                const sText = (item.status || "").replace(/\s+/g, '');
+
+                if (isMandatoryDay) {
+                    // 의무 출석일에는 모든 선생님이 보여야 함
+                    teacherVisibilityMap.set(tKey, true);
+                } else {
+                    if (tText !== '-' && tText !== '') teacherVisibilityMap.set(tKey, true);
+                    if (sText.includes('휴가')) teacherVisibilityMap.set(tKey, true);
+                }
+            });
+
+            dailyData = dailyData.filter(item => teacherVisibilityMap.get(`${item.team}|${item.group}|${item.name}`));
+
+            let prevAssistantGlobal = new Map();
+            dailyData.forEach(item => {
+                const tKey = `${item.team}|${item.group}|${item.name}`;
+                let tDisp = (item.target || "").trim().replace(/\s+/g, '');
+                if (tDisp.includes('보조강사')) {
+                    item.isConsecutiveAssistant = (prevAssistantGlobal.get(tKey) === tDisp);
+                    prevAssistantGlobal.set(tKey, tDisp);
+                } else {
+                    item.isConsecutiveAssistant = false;
+                    prevAssistantGlobal.set(tKey, null);
+                }
+            });
+
+            const teacherStatusMap = new Map();
+            const groupTargetSet = new Set();
+            const scheduleSet = new Set();
+            const sessionGroups = { '전체': [], '7회 이하': [], '8~14회': [], '15회 이상': [] };
+            const validScheduleGroups = { '전체': [] };
+            const sessionMap = new Map();
+
+            dailyData.forEach(item => {
+                let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                let isPartial = false;
+                if (rawStatus) {
+                    const checkStr = rawStatus.replace(/\s+/g, '');
+                    const match = rawStatus.match(/^(\d+)/);
+                    let extC = match ? parseInt(match[1], 10) : 0;
+                    if ((checkStr.includes('결석') || checkStr.includes('취소')) && extC >= 1) isPartial = true;
+                }
+                item.isPartial = isPartial;
+
+                const cleanTeacher = item.name.replace(/\s+/g, '');
+                if (cleanTeacher !== '천은선서승희') {
+                    if (!teacherStatusMap.has(item.name)) {
+                        // 의무 출석일이면 기본 상태를 '출근_확정'으로 설정 (수업 없어도 출근)
+                        teacherStatusMap.set(item.name, { item: item, status: isMandatoryDay ? '출근_확정' : '출근' });
+                    }
+                    let tData = teacherStatusMap.get(item.name);
+                    if (rawStatus) {
+                        const checkStr = rawStatus.replace(/\s+/g, '');
+                        if (checkStr.includes('선생님휴가')) {
+                            tData.status = '휴가'; // 휴가는 가장 높은 우선순위
+                        } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
+                            tData.status = '출근_확정';
+                        }
+                    }
+                }
+
+                const targetText = (item.target || "").trim();
+                const isEmptyTarget = (!targetText || targetText === '-');
+
+                let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
+                let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+                if (isEmptyTarget) stat_sCount = 0;
+
+                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sUnconfirmed = 0;
+                let stat_pStr = rawStatus ? rawStatus.trim() : "";
+
+                let cleanTargetStr = targetText.replace(/\s+/g, '');
+                let cleanLocationStr = (item.location || '').replace(/\s+/g, '');
+                let isExcludedTextOnly = ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴', '선생님휴가', '휴가'].some(kw => stat_pStr.replace(/\s+/g, '').includes(kw));
+                if (cleanTargetStr.includes('자체학습') || cleanTargetStr.includes('대상자발굴')) isExcludedTextOnly = true;
+                if (cleanTargetStr.includes('간담회') || cleanLocationStr.includes('소양교육')) isExcludedTextOnly = true;
+
+                if (stat_sCount > 0) {
+                    if (stat_pStr === "" && !isExcludedTextOnly) {
+                        stat_sUnconfirmed = stat_sCount;
+                    } else if (isExcludedTextOnly) {
+                        stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
+                    } else {
+                        // ✅ 슬래시(/) 처리를 위한 로직 추가
+                        // 먼저 콤마 등으로 분리된 맨 앞의 '상태 태그' 부분만 추출
+                        const tagPart = stat_pStr.split(',')[0].trim();
+
+                        // 슬래시(/)가 포함되어 있고, 대상자 수가 2명 이상인 경우 개별 파싱
+                        if (tagPart.includes('/') && stat_sCount >= 2) {
+                            const parts = tagPart.split('/');
+                            parts.forEach(p => {
+                                if (p.includes('결석')) {
+                                    stat_sAbsent++;
+                                } else if (p.includes('취소') || p.includes('휴가')) {
+                                    stat_sCancel++;
+                                } else {
+                                    // 숫자가 있으면 출석으로 인정
+                                    const match = p.match(/\d+/);
+                                    if (match && parseInt(match[0], 10) > 0) {
+                                        stat_sAttend++;
+                                    }
+                                }
+                            });
+                            // 파싱된 상태 합이 전체 학생 수와 다를 경우 남은 인원은 미확인 처리
+                            let parsedTotal = stat_sAttend + stat_sAbsent + stat_sCancel;
+                            if (parsedTotal < stat_sCount) {
+                                stat_sUnconfirmed = stat_sCount - parsedTotal;
+                            } else if (parsedTotal > stat_sCount) {
+                                // 만약 파싱된 항목 수가 대상자 수보다 많다면 초과된 만큼 출석에서 차감(안전 장치)
+                                let over = parsedTotal - stat_sCount;
+                                if (stat_sAttend >= over) stat_sAttend -= over;
+                            }
+                        } else {
+                            // 기존 로직 유지 (슬래시가 없거나 대상자가 1명일 때)
+                            const match = stat_pStr.match(/\d+/);
+                            const firstNum = match ? parseInt(match[0], 10) : 0;
+                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
+                            let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+
+                            if (stat_pStr.startsWith("취소")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; }
+                                else { stat_sCancel = stat_sCount; }
+                            } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
+                                stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr;
+                                stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
+                            } else if (stat_pStr.includes("결석")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; }
+                                else { stat_sAbsent = stat_sCount; }
+                            } else if (stat_pStr.includes("취소")) {
+                                if (/^1/.test(stat_pStr.trim())) {
+                                    stat_sAttend = 1;
+                                    stat_sCancel = stat_sCount === 1 ? 1 : stat_sCount - 1;
+                                } else if (match && stat_sCount > firstNum) {
+                                    stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum;
+                                } else {
+                                    stat_sCancel = stat_sCount;
+                                }
+                            } else {
+                                if (match) stat_sAttend = firstNum;
+                                else stat_sAttend = stat_sCount;
+                            }
+                        }
+                    }
+                }
+
+                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statUnconfirmed = stat_sUnconfirmed;
+
+                let validScheduleNamesArray = [];
+                if (!isEmptyTarget) {
+                    let cleanTarget = targetText.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const allNames = cleanTarget.split(/[/, \n]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    const namesWithoutPrep = allNames.filter(name => name !== '학습' && name !== '대상자' && name !== '대상자없음');
+                    validScheduleNamesArray = Array.from(new Set(namesWithoutPrep));
+                    if (validScheduleNamesArray.length === 0) validScheduleNamesArray = ['-'];
+                } else validScheduleNamesArray = ['-'];
+
+                const scheduleKey = `${item.team}|${item.group}|${item.name}|${item.time}|${targetText}`;
+                if (!scheduleSet.has(scheduleKey)) {
+                    scheduleSet.add(scheduleKey);
+                    validScheduleGroups['전체'].push(item);
+                }
+
+                validScheduleNamesArray.forEach(name => {
+                    let cleanStudentName = name.replace(/\s+/g, '');
+                    if (cleanStudentName.includes('보조강사')) return;
+
+                    let traineeUniqueKey = (cleanStudentName !== '-' && cleanStudentName !== '')
+                        ? `${item.team}|${item.group}|${item.name}|${cleanStudentName}`
+                        : `${item.team}|${item.group}|${item.name}|${item.time}|${cleanStudentName}`;
+
+                    if (!groupTargetSet.has(traineeUniqueKey)) {
+                        groupTargetSet.add(traineeUniqueKey);
+                        // 특정 학생 정보를 위해 clone 생성
+                        const traineeItem = { ...item, splitName: name };
+                        traineeItem.isConsecutiveAssistant = false;
+
+                        if (!isExcludedCondition(traineeItem, name)) {
+                            let sName = name ? name.trim() : '';
+                            const excludeKeywords = ['보조강사', '개발중', '자체학습', '오전수업', '컴1/보조', '컴기초1반', '컴활용/보조'];
+                            let isExcludedSession = !sName || sName === '-';
+                            if (!isExcludedSession) {
+                                for (let kw of excludeKeywords) {
+                                    if (sName.includes(kw)) { isExcludedSession = true; break; }
+                                }
+                            }
+                            if (!isExcludedSession) {
+                                let matchedObj = traineeItem.sessionCounts ? traineeItem.sessionCounts.find(sc => sName.includes(sc.name) || sc.name.includes(sName)) : null;
+                                let currentCount = matchedObj ? matchedObj.count : 0;
+                                traineeItem.sessionCount = currentCount;
+
+                                if (!sessionMap.has(sName)) sessionMap.set(sName, traineeItem);
+                                else {
+                                    let existingItem = sessionMap.get(sName);
+                                    let existingCount = parseInt(existingItem.sessionCount, 10);
+                                    if (isNaN(existingCount)) existingCount = 0;
+                                    if (currentCount > existingCount) sessionMap.set(sName, traineeItem);
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            sessionMap.forEach((item, sName) => {
+                let count = parseInt(item.sessionCount, 10);
+                let sessionGroupName = '';
+                if (isNaN(count) || !item.sessionCount) sessionGroupName = '7회 이하';
+                else if (count <= 7) sessionGroupName = '7회 이하';
+                else if (count <= 14) sessionGroupName = '8~14회';
+                else sessionGroupName = '15회 이상';
+                item.sessionGroupName = sessionGroupName;
+                item.calcCount = 1;
+                sessionGroups[sessionGroupName].push(item);
+                sessionGroups['전체'].push(item);
+            });
+
+            const teacherGroups = { '전체': [], '출근': [], '휴가': [] };
+            teacherStatusMap.forEach((tData) => {
+                const finalStatus = tData.status === '휴가' ? '휴가' : '출근';
+                tData.item.teacherFinalStatus = finalStatus;
+                teacherGroups['전체'].push(tData.item);
+                teacherGroups[finalStatus].push(tData.item);
+            });
+
+            const filterScheduleForGraph = (item) => {
+                if (isExcludedCondition(item, item.target)) return false;
+                const t = (item.target || '').trim();
+                if (t === '-' || t === '') return false;
+                return true;
+            };
+
+            const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
+            let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalUnconfirmed = 0;
+            graphSchedulesAll.forEach(item => {
+                totalAttend += item.statAttend || 0;
+                totalAbsent += item.statAbsent || 0;
+                totalCancel += item.statCancel || 0;
+                totalUnconfirmed += item.statUnconfirmed || 0;
+            });
+            let totalTrainees = totalAttend + totalAbsent + totalUnconfirmed;
+
+            let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0).length;
+            let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
+
+            return {
+                dailyData, teacherGroups, validScheduleGroups, sessionGroups,
+                totalTrainees, totalAttend, totalAbsent, totalCancel, totalUnconfirmed,
+                graphSchedulesAll, schedCompletedCount, schedUnconfCount, filterScheduleForGraph
+            };
+        }
+
+        async function generateWordCloud(data) {
+            const wordCloudContainer = document.getElementById('wordCloudContainer');
+            let allMemos = "";
+            const processedEntrySet = new Set();
+            const dynamicStopwords = new Set();
+
+            data.forEach(item => {
+                if (isExcludedCondition(item, item.target)) return;
+                if (item.name && item.name !== '-' && item.name !== '이름없음') {
+                    let tName = item.name.replace(/\s+/g, '');
+                    if (/^[가-힣]{2,4}$/.test(tName)) {
+                        dynamicStopwords.add(tName);
+                        if (tName.length >= 3) dynamicStopwords.add(tName.substring(1));
+                    }
+                }
+                if (item.target && item.target !== '-') {
+                    let cleanTarget = item.target.replace(/대상자\s*없음|대상자\s*발굴|보조강사|[0-9]+명/g, '');
+                    const names = cleanTarget.split(/[/, \n()]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    names.forEach(n => {
+                        let sName = n.replace(/\s+/g, '');
+                        if (/^[가-힣]{2,4}$/.test(sName)) {
+                            dynamicStopwords.add(sName);
+                            if (sName.length >= 3) dynamicStopwords.add(sName.substring(1));
+                        }
+                    });
+                }
+                if (!item.status || item.status === '-' || !item.target || item.target === '-') return;
+
+                const uniqueKey = item.originalIndex;
+                if (!processedEntrySet.has(uniqueKey)) {
+                    processedEntrySet.add(uniqueKey);
+                    let memo = item.status.replace(/선생님\s*휴가|결석|취소/g, '');
+                    memo = window.autoCorrectText(memo);
+                    memo = memo.replace(/(^|[^0-9])\d+\s*명?(?=[^0-9]|$)/g, '$1');
+                    memo = memo.replace(/^[,\s()]+|[,\s()]+$/g, '').trim();
+                    if (memo && memo !== '-') allMemos += memo + "\n";
+                }
+            });
+
+            if (!allMemos.trim()) {
+                wordCloudContainer.innerHTML = '<div class="text-slate-400 text-center w-full text-[clamp(16px,1.5vw,24px)]">오늘 학습 관련 교육 내역이 없습니다.</div>';
+                return;
+            }
+
+            const hashCode = s => s.split('').reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0);
+            const cacheKey = 'wc_cache_v3_' + hashCode(allMemos + Array.from(dynamicStopwords).join(''));
+            const cachedData = sessionStorage.getItem(cacheKey);
+
+            const renderCloud = (wordCounts) => {
+                const sortedWords = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]).slice(0, 35);
+                if (sortedWords.length === 0) {
+                    wordCloudContainer.innerHTML = '<div class="text-slate-400 text-center w-full text-[clamp(16px,1.5vw,24px)]">분석된 핵심 키워드가 없습니다.</div>';
+                    return;
+                }
+                const maxCount = sortedWords[0][1];
+                const colors = ['bg-indigo-900/50 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]', 'bg-emerald-900/50 text-emerald-300 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]', 'bg-purple-900/50 text-purple-300 border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]', 'bg-rose-900/50 text-rose-300 border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.2)]', 'bg-amber-900/50 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]', 'bg-cyan-900/50 text-cyan-300 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]'];
+                wordCloudContainer.innerHTML = sortedWords.map(([word, count], idx) => {
+                    const fontSize = Math.max(12, Math.min(32, (count / maxCount) * 32));
+                    const fontSize2xl = Math.round(fontSize * 1.8);
+                    const vwVal = (fontSize2xl / 15.36).toFixed(2);
+                    const colorClass = colors[idx % colors.length];
+                    return `<span class="word-chip px-[clamp(12px,1.5vw,24px)] py-[clamp(4px,0.6vw,12px)] rounded-full border ${colorClass} font-bold" style="font-size: clamp(${fontSize}px, ${vwVal}vw, ${fontSize2xl}px);">${word} <span class="text-[0.6em] opacity-50 ml-1 font-normal">${count}</span></span>`;
+                }).join('');
+            };
+
+            if (cachedData) { renderCloud(JSON.parse(cachedData)); return; }
+
+            const extractKeywordsLocally = () => {
+                const wordCounts = {};
+                const stopwords = new Set(['교육', '진행', '수업', '선생님', '어르신', '대상자', '오늘', '내일', '시간', '정도', '조금', '많이', '질문', '답변', '설명', '연습', '복습', '기능', '사용', '방법', '이용', '배움', '학습', '복지관', '경로당', '휴가', '결석', '취소', '완료', '미확인', '이해', '어려워', '쉬워', '요청', '도움', '다시', '한번', '같이', '직접', '스스로', '혼자', '했습니다', '합니다', '입니다', '어르신들', '강사', '보조강사', '어려워하심', '좋아하심', '관심', '필요', '기본', '안내', '확인', '설치', '가입', '변경', '삭제', '추가', '검색', '화면', '설정', '관련', '위해', '통해', '대해', '대하여', '관하여', '위하여', '통하여', '대해서', '관련해서', '위해서', '통해서', '대한', '관한', '위한', '통한', '있는', '없는', '하는', '되는', '같은', '있음', '없음', '같음', '하심', '주심', '드림', '알려드림', '도와드림', '가르쳐드림', '해드림', '해줌', '진행함', '설명함', '안내함', '수업함', '교육함', '학습함', '복습함', '연습함', '지원함', '마무리', '예정', '준비', '대기', '계획', '진행중', '수업중', '교육중', '방문', '이동', '센터', '그리고', '그래서', '그러나', '그런데', '하지만', '또는', '또한', '매우', '아주', '너무', '정말', '진짜', '상당히', '특히', '자주', '가장', '제일', '모두', '전부', '전체', '다들', '다같이', '서로', '함께', '혼자서', '마음', '생각', '느낌', '사실', '경우', '부분', '사항', '내용', '모습', '모양', '다소', '약간', '거의', '대부분', '일단', '우선', '먼저', '지금', '현재', '나중', '이후', '이전', '어제', '모레', '이번', '저번', '다음', '계속', '항상', '가끔', '때때로', '아직', '벌써', '이미', '빨리', '일찍', '늦게', '천천히', '갑자기', '어쩌다', '혹시', '만약', '아마', '물론', '당연히', '역시', '참', '엄청', '몹시', '잘', '못', '안', '아니', '그냥', '바로', '또', '더', '덜', '좀', '다', '일부', '반', '절반', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열', '알려', '알려드림', '가르쳐', '알려줌', '알려주고', '배웠습니다', '배움', '배웠음', '배우고', '배우기', '배우심', '배우셨음', '배우셨습니다', '배우셨고', '복습했습니다', '복습하심', '연습하심', '질문하심', '물어보심', '알아봄', '알아보기', '해봄', '해보기']);
+                const synonyms = {
+                    '카톡': '카카오톡', '카카오': '카카오톡', '오픈채팅': '카카오톡',
+                    '유투브': '유튜브', 'youtube': '유튜브', '유투브앱': '유튜브',
+                    '스마트폰': '스마트폰', '핸드폰': '스마트폰', '휴대폰': '스마트폰', '폰': '스마트폰',
+                    '어플': '앱', '애플리케이션': '앱', '어플리케이션': '앱',
+                    '와이파이': '와이파이', 'wifi': '와이파이',
+                    '키오스크': '키오스크', 'kiosk': '키오스크',
+                    '사진촬영': '사진', '동영상촬영': '동영상',
+                    '보이스피싱': '스미싱',
+                    '챗gpt': '챗GPT', 'chatgpt': '챗GPT', '챗지피티': '챗GPT',
+                    '카카오t': '카카오T', '카카오티': '카카오T', '카카오택시': '카카오T'
+                };
+                const explicitKeywords = ['제미나이', '와이파이', '챗gpt', '스마트폰', '키오스크', '유튜브', '카카오톡', '스미싱', '보이스피싱', '삼성페이', '애플페이', '네이버페이', '카카오페이', '정부24', '캐시워크', '당근마켓', '당근', '쿠팡', '네이버', '다음', '밴드', '인스타그램', '페이스북', '틱톡', '줌', '코레일톡', '코레일', '카카오티', '카카오t', '카카오택시', '티맵', '토스', '카카오뱅크', '네이버지도', '카카오맵', '플레이스토어', '앱스토어', '갤러리', '카메라', '연락처', '문자', '전화', '설정', '배경화면', '카카오스토리', '챗지피티', 'chatgpt', '자동친구추가', '에이아이', '새마을금고', '파파고', '서울페이', '자판기', '따릉이', '사진찍기', '생활편의', '렌스깔리', '렌즈깔기', '재미나이', '홈화면'];
+                const excludeContains = ['대체휴무', '복지관', '제주여행', '제주도여행', '개인사유', '수업종료', '집안행사', '개인일정', '병원방문', '선약', '사전공지', '어르신행사', '불참', '집안', '연락옴', '개인사정', '했음', '시작', '자체', '개별', '부부', '없다', '편찮으심', '통보', '출사', '여러', '병원', '만료', '거동', '불편', '참석', '개인', '착각', '감기', '전주', '종료', '있으심', '정정'];
+
+                const smartRecoveryDict = [
+                    '스마트폰', '카카오톡', '유튜브', '키오스크', '챗GPT', '제미나이', '와이파이',
+                    '서울페이', '삼성페이', '애플페이', '네이버페이', '카카오페이', '제로페이', '페이',
+                    '메시지', '문자', '전화', '연락처추가', '연락처', '글쓰기', '길찾기', '따릉이',
+                    '정부24', '캐시워크', '당근마켓', '당근', '쿠팡', '네이버', '다음', '밴드',
+                    '인스타그램', '페이스북', '틱톡', '줌', '코레일톡', '코레일', '카카오T', '카카오택시',
+                    '티맵', '토스', '카카오뱅크', '네이버지도', '카카오맵', '플레이스토어', '앱스토어',
+                    '갤러리', '카메라', '사진촬영', '동영상촬영', '사진찍기', '배경화면', '홈화면',
+                    '카카오스토리', '에이아이', '새마을금고', '파파고', '자판기', '생활편의', '렌즈',
+                    '보이스피싱', '스미싱', '결제', '인터넷', '어플', '앱', '검색', '설정', '블루투스',
+                    '화면밝기', '글자크기', '소리설정', '무음', '진동', '알림', '계정', '비밀번호', '로그인',
+                    '회원가입', '본인인증', '인증서', '공동인증서', '금융', '은행', '쇼핑', '배달',
+                    '배달의민족', '요기요', '택시호출', '기차예매', '버스예매', '고속버스', '지도', '네비게이션',
+                    '음성검색', 'QR코드', '바코드', '키보드', '천지인', '음성입력', '스마트폰기초', '디지털기초',
+                    '스미싱예방', '오픈채팅', '단톡방', '이메일', '구글', '크롬', '인증번호', '모바일신분증',
+                    '사진전송', '음성메시지', '송금', '계좌이체', '스마트폰활용', '디지털배움터'
+                ].sort((a, b) => b.length - a.length);
+
+                const words = allMemos.split(/[\s,./\n()~?!'":;+\[\]{}<>-]+/);
+
+                words.forEach(word => {
+                    let cleanWord = word;
+                    if (excludeContains.some(ex => cleanWord.includes(ex))) return;
+
+                    let foundKeyword = explicitKeywords.find(kw => cleanWord.toLowerCase().includes(kw));
+                    if (foundKeyword) {
+                        let finalKw = foundKeyword.toLowerCase();
+                        if (synonyms[finalKw]) finalKw = synonyms[finalKw];
+                        else if (finalKw === '챗지피티' || finalKw === 'chatgpt') finalKw = '챗gpt';
+                        else if (finalKw === '카카오티' || finalKw === '카카오t' || finalKw === '카카오택시') finalKw = '카카오t';
+
+                        let displayKw = foundKeyword;
+                        if (finalKw === '챗gpt') displayKw = '챗GPT';
+                        else if (finalKw === '카카오t') displayKw = '카카오T';
+                        else if (finalKw === '와이파이') displayKw = '와이파이';
+
+                        wordCounts[displayKw] = (wordCounts[displayKw] || 0) + 1;
+                        return;
+                    }
+
+                    let originalForRecovery = cleanWord;
+
+                    cleanWord = cleanWord.replace(/(어르신|님|강사님|선생님|보조강사|어머니|아버지)$/, '');
+                    cleanWord = cleanWord.replace(/(은|는|이|가|을|를|에|에게|에서|로|으로|과|와|도|입니다|합니다|습니다|요|께서|까지|부터|마저|조차|만|뿐|의|들|고|하고|하게|하시|하신|하셨|하여|해|해서|해요|며|면|지만|에서부터|이라는|라는|이라고|으로서|으로서의)$/, '');
+                    cleanWord = cleanWord.replace(/^[^a-zA-Z가-힣0-9]+|[^a-zA-Z가-힣0-9]+$/g, '');
+
+                    if (cleanWord.length > 2) cleanWord = cleanWord.replace(/(하기|하는법|하는방법|방법|사용법|활용법|보는법|드림|주심|하심|설명|안내|연습|복습|진행|학습)$/, '');
+                    if (cleanWord.length > 1) cleanWord = cleanWord.replace(/(함|됨)$/, '');
+
+                    let recoveredWord = smartRecoveryDict.find(kw => originalForRecovery.includes(kw));
+                    if (recoveredWord) {
+                        cleanWord = recoveredWord;
+                    }
+
+                    if (cleanWord.length >= 2 && isNaN(cleanWord) && !/^\d+(명|시|분|회|회차|층|월|일|년|개|번|원)$/.test(cleanWord)) {
+                        cleanWord = cleanWord.toLowerCase();
+                        if (synonyms[cleanWord]) cleanWord = synonyms[cleanWord];
+                        const isVerbEnding = /(하다|했다|하셨다|주셨다|해주다|해드림|알려줌|가르쳐)$/.test(cleanWord);
+
+                        if (!stopwords.has(cleanWord) && !dynamicStopwords.has(cleanWord) && !isVerbEnding) {
+                            let displayWord = cleanWord;
+                            if (cleanWord === '챗gpt') displayWord = '챗GPT';
+                            if (cleanWord === '카카오t') displayWord = '카카오T';
+                            wordCounts[displayWord] = (wordCounts[displayWord] || 0) + 1;
+                        }
+                    }
+                });
+                return wordCounts;
+            };
+
+            const wordCounts = extractKeywordsLocally();
+            sessionStorage.setItem(cacheKey, JSON.stringify(wordCounts));
+            renderCloud(wordCounts);
+        }
+
+        function createGaugeHTML(rateLabel, total, unit, sections, cardTypeId, mainIndex = 0) {
+            if (total === 0 && sections.every(sec => sec.count === 0)) return '<div class="w-full text-center text-slate-500 py-4 mt-4 border-t border-white/10 font-medium text-[clamp(14px,1.2vw,20px)]">데이터 없음</div>';
+            let paths = ''; let currentOffset = 0;
+            sections.forEach(sec => {
+                if (sec.count === 0 || sec.hideFromGauge) return;
+                const percentage = total > 0 ? (sec.count / total) * 100 : 0;
+                paths += `<path d="M 10 45 A 35 35 0 0 1 90 45" fill="none" stroke="${sec.color}" stroke-width="14" stroke-dasharray="${percentage} 100" stroke-dashoffset="-${currentOffset}" pathLength="100" class="gauge-path" stroke-linecap="butt" />`;
+                currentOffset += percentage;
+            });
+            const mainPercent = total > 0 && sections[mainIndex] && sections[mainIndex].count > 0 ? Math.round((sections[mainIndex].count / total) * 100) : 0;
+            let legendHtml = '';
+            sections.forEach(sec => {
+                legendHtml += `<div class="legend-btn text-center flex flex-col items-center cursor-pointer hover:bg-slate-800/80 rounded-lg p-1 sm:p-1.5 transition-colors active:scale-95 shrink-0 border border-transparent hover:border-slate-700" data-type="${cardTypeId}" data-filter="${sec.label}">
+                        <div class="flex items-center gap-[clamp(2px,0.5vw,8px)] text-slate-400 font-medium text-[clamp(12px,1.2vw,16px)] whitespace-nowrap">
+                            <span class="rounded-full w-[clamp(6px,1vw,12px)] h-[clamp(6px,1vw,12px)] shrink-0 drop-shadow-[0_0_5px_${sec.color}]" style="background-color: ${sec.color}"></span>${sec.label}
+                        </div>
+                        <span class="font-bold text-slate-200 mt-0.5 text-[clamp(15px,1.6vw,22px)] whitespace-nowrap">${sec.count}<span class="font-normal ml-0.5 text-slate-500 text-[clamp(10px,1vw,14px)]">${unit}</span></span>
+                    </div>`;
+            });
+            return `<div class="w-full flex flex-col items-center border-t border-slate-700/50 pt-4 2xl:pt-6 mt-4">
+                <div class="relative w-full max-w-[180px] 2xl:max-w-[240px] flex justify-center items-center">
+                    <svg viewBox="0 -10 100 65" class="w-full h-auto overflow-visible"><path d="M 10 45 A 35 35 0 0 1 90 45" fill="none" stroke="#334155" stroke-width="14" stroke-linecap="butt" />${paths}</svg>
+                    <div class="absolute inset-x-0 bottom-3 2xl:bottom-5 flex flex-col items-center justify-end">
+                        <span class="font-extrabold text-slate-100 leading-none tracking-tight text-[clamp(20px,2.5vw,36px)] drop-shadow-md">${mainPercent}%</span>
+                        <span class="text-slate-300 font-bold mt-1 text-[clamp(9px,1vw,14px)]">${rateLabel}</span>
+                    </div>
+                </div>
+                <div class="w-full flex flex-nowrap justify-center gap-[clamp(4px,1vw,16px)] mt-2 2xl:mt-4 px-1 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <div class="legend-btn text-center flex flex-col items-center border-r border-slate-700 pr-[clamp(4px,1vw,16px)] cursor-pointer hover:bg-slate-800 rounded-lg p-1 sm:p-1.5 transition-colors active:scale-95 shrink-0" data-type="${cardTypeId}" data-filter="전체">
+                        <span class="text-slate-400 font-medium text-[clamp(12px,1.2vw,16px)] whitespace-nowrap">전체</span>
+                        <span class="font-bold text-slate-200 mt-0.5 text-[clamp(15px,1.6vw,22px)] whitespace-nowrap">${total}<span class="font-normal ml-0.5 text-slate-500 text-[clamp(10px,1vw,14px)]">${unit}</span></span>
+                    </div>${legendHtml}
+                </div>
+            </div>`;
+        }
+
+        const isExcludedCondition = (item, name = '') => {
+            const kws = ['대상자발굴', '수업준비', '복지관이동', '복지관으로이동', '이동시간', '자체학습', '선생님휴가', '휴가'];
+            const targetStr = (item.target || '').replace(/\s+/g, '');
+            const statusStr = (item.status || '').replace(/\s+/g, '');
+            const nameStr = (name || '').replace(/\s+/g, '');
+            const locationStr = (item.location || '').replace(/\s+/g, '');
+            
+            // 기존 제외 키워드 체크
+            if (kws.some(kw => targetStr.includes(kw) || statusStr.includes(kw) || nameStr.includes(kw))) return true;
+            
+            // 새 제외 조건: 학생이름에 '간담회' 또는 장소에 '소양교육' 포함
+            if (targetStr.includes('간담회') || nameStr.includes('간담회')) return true;
+            if (locationStr.includes('소양교육')) return true;
+            
+            return false;
+        };
+
+        function renderDashboard() {
+            const targetM = currentDateObj.getMonth() + 1;
+            const targetD = currentDateObj.getDate();
+            const dData = prepareDailyData(targetM, targetD);
+
+            window.dashboardData = dData;
+
+            generateWordCloud(dData.dailyData);
+
+            document.getElementById('kpiTeacher').textContent = dData.teacherGroups['출근'].length;
+            document.getElementById('kpiTrainee').textContent = dData.totalTrainees;
+            document.getElementById('kpiSession').textContent = dData.sessionGroups['전체'].length;
+            document.getElementById('kpiSchedule').textContent = dData.graphSchedulesAll.length;
+
+            document.getElementById('gaugeTeacher').innerHTML = createGaugeHTML('출근률', dData.teacherGroups['전체'].length, '명', [
+                { label: '출근', count: dData.teacherGroups['출근'].length, color: '#3b82f6' },
+                { label: '휴가', count: dData.teacherGroups['휴가'].length, color: '#38bdf8' }
+            ], 'teacher');
+
+            document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', dData.totalTrainees, '명', [
+                { label: '출석', count: dData.totalAttend, color: '#3b82f6' },
+                { label: '결석', count: dData.totalAbsent, color: '#ef4444' },
+                { label: '취소', count: dData.totalCancel, color: '#fdba74', hideFromGauge: true },
+                { label: '미확인', count: dData.totalUnconfirmed, color: '#9ca3af' }
+            ], 'trainee');
+
+            document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', dData.graphSchedulesAll.length, '건', [
+                { label: '완료', count: dData.schedCompletedCount, color: '#3b82f6' },
+                { label: '미확인', count: dData.schedUnconfCount, color: '#9ca3af' }
+            ], 'schedule');
+
+            document.getElementById('gaugeSession').innerHTML = createGaugeHTML('15회 이상 비율', dData.sessionGroups['전체'].length, '명', [
+                { label: '15회 이상', count: dData.sessionGroups['15회 이상'].length, color: '#3b82f6' },
+                { label: '8~14회', count: dData.sessionGroups['8~14회'].length, color: '#f97316' },
+                { label: '7회 이하', count: dData.sessionGroups['7회 이하'].length, color: '#0ea5e9' }
+            ], 'session', 0);
+
+            const listForGrid = dData.validScheduleGroups['전체'].sort((a, b) => a.originalIndex - b.originalIndex);
+            const groupedForGrid = {};
+            listForGrid.forEach(item => {
+                if (!groupedForGrid[item.team]) groupedForGrid[item.team] = {};
+                const tKey = `${item.group}|${item.name}`;
+                if (!groupedForGrid[item.team][tKey]) groupedForGrid[item.team][tKey] = [];
+                groupedForGrid[item.team][tKey].push(item);
+            });
+
+            const renderTeamGrid = (teamName) => {
+                if (!groupedForGrid[teamName]) return '';
+                let teamHtml = `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b-2 border-slate-700 pb-1 font-bold text-slate-300 text-[clamp(14px,1.5vw,20px)]">${teamName}</div><div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-[clamp(8px,1vw,12px)]">`;
+                let headerBgClass = '';
+                if (teamName === '1팀') headerBgClass = 'bg-indigo-600/80 backdrop-blur-md'; else if (teamName === '2팀') headerBgClass = 'bg-emerald-600/80 backdrop-blur-md'; else if (teamName === '3팀') headerBgClass = 'bg-purple-600/80 backdrop-blur-md';
+                const now = new Date();
+                const isToday = currentDateObj.getFullYear() === now.getFullYear() && currentDateObj.getMonth() === now.getMonth() && currentDateObj.getDate() === now.getDate();
+                const currentMins = now.getHours() * 60 + now.getMinutes();
+
+                for (const tKey in groupedForGrid[teamName]) {
+                    const teacherClasses = groupedForGrid[teamName][tKey];
+                    const groupName = teacherClasses[0].group; const teacherName = teacherClasses[0].name;
+
+                    teamHtml += `<div class="bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/10 overflow-hidden flex flex-col hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-shadow h-full w-full"><div class="${headerBgClass} py-[clamp(6px,0.8vw,10px)] px-[clamp(12px,1.2vw,20px)] border-b border-white/10 flex items-center justify-center text-white shadow-sm"><span class="font-black tracking-tighter leading-tight whitespace-nowrap text-[clamp(14px,1.3vw,20px)]">${groupName} <span class="ml-1 text-[1.2em] opacity-100">${teacherName}</span></span></div><div class="flex flex-col p-[clamp(6px,0.8vw,8px)] gap-[clamp(6px,0.8vw,8px)] bg-slate-900/50 flex-grow shadow-inner">`;
+
+                    const timeMap = new Map();
+                    teacherClasses.forEach(it => {
+                        const tr = it.time.replace(/\s+/g, ''); let tk = null;
+                        if (tr.includes('9:30')) tk = 'slot1'; else if (tr.includes('10:30') || tr.includes('11:00') || tr.includes('14:00')) tk = 'slot2'; else if (tr.includes('11:30') || tr.includes('15:00')) tk = 'slot3';
+                        if (tr.includes('13:00')) tk = 'slot1';
+                        if (!timeMap.has(tk) || (timeMap.get(tk).target === '-' && it.target !== '-')) timeMap.set(tk, it);
+                    });
+
+                    let prevAssistantGrid = null;
+                    ['slot1', 'slot2', 'slot3'].forEach((sk, idx) => {
+                        const it = timeMap.get(sk);
+                        if (it) {
+                            let itRawStat = (it.status && it.status.trim() !== '-') ? it.status.trim() : '';
+                            let itTargetText = (it.target || "").trim(); let tDisp = itTargetText === '-' || itTargetText === '' ? '대상자 없음' : itTargetText;
+
+                            let isConsecutiveAssistant = false;
+                            if (tDisp.includes('보조강사')) {
+                                let cleanTDisp = tDisp.replace(/\s+/g, '');
+                                if (prevAssistantGrid === cleanTDisp) isConsecutiveAssistant = true;
+                                prevAssistantGrid = cleanTDisp;
+                            } else prevAssistantGrid = null;
+
+                            let sAttend = it.statAttend || 0; let sAbsent = it.statAbsent || 0; let sCancel = it.statCancel || 0; let sUnconfirmed = it.statUnconfirmed || 0;
+                            let dColor = 'text-indigo-300';
+                            const cleanR = itRawStat.replace(/\s+/g, '');
+                            if (cleanR.includes('선생님휴가')) dColor = 'text-sky-400 font-bold';
+                            else if (cleanR.includes('결석') || cleanR.includes('취소') || it.isPartial || sAbsent >= 1 || sCancel >= 1) dColor = 'text-rose-400 font-bold';
+
+                            let fullLocText = it.location === '-' || it.location === '' ? '' : ` (${it.location})`;
+                            let gridLocStr = it.location === '-' || it.location === '' ? '' : it.location;
+                            if (gridLocStr.includes('복지관')) gridLocStr = '';
+                            let lHtml = gridLocStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${gridLocStr})</span>`;
+
+                            let cBg = '';
+                            if (cleanR.includes('휴가')) cBg = 'bg-sky-500/30 border-sky-400/50';
+                            else if (tDisp === '대상자 없음' || tDisp.replace(/\s+/g, '').includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
+                            else if (sAttend >= 1) cBg = 'bg-indigo-500/20 border-indigo-400/50';
+                            else if (sAbsent >= 1) cBg = 'bg-rose-500/20 border-rose-400/50';
+                            else if (sCancel >= 1) cBg = 'bg-amber-500/20 border-amber-400/50';
+                            else cBg = 'bg-slate-700/50 border-slate-500';
+
+                            let isBlinking = false;
+                            if (isToday && (sAttend >= 1 || sUnconfirmed >= 1)) {
+                                const timeMatch = it.time.match(/(\d+):(\d+)/);
+                                if (timeMatch) {
+                                    const sMins = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]); const eMins = sMins + 60;
+                                    if (currentMins >= sMins && currentMins < eMins) isBlinking = true;
+                                }
+                            }
+
+                            let blinkHtml = isBlinking ? `<span class="w-[clamp(8px,1vw,12px)] h-[clamp(8px,1vw,12px)] rounded-full bg-red-500 animate-pulse inline-block ml-1.5 shadow-[0_0_5px_#ef4444]" title="현재 진행중"></span>` : '';
+                            let isGridExcluded = isExcludedCondition(it, itTargetText);
+                            let cleanTDispForCheck = tDisp.replace(/\s+/g, '');
+                            let isHideBadges = tDisp === '대상자 없음' || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습') || cleanR.includes('휴가');
+
+                            const makeStatBtnGrid = (label, count, activeBgClass) => {
+                                if (isHideBadges) return '';
+                                if (count >= 1) return `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${activeBgClass}"><span class="mr-0.5">${label}</span><span>${count}</span></div>`;
+                                return '';
+                            };
+
+                            let sessionBadgeHtmlGrid = '';
+                            if (!isHideBadges && it.sessionCounts) {
+                                sessionBadgeHtmlGrid = it.sessionCounts.map(sc => {
+                                    let badgeClass = '';
+                                    const count = parseInt(sc.count, 10);
+                                    if (count >= 15) badgeClass = 'bg-purple-800 text-purple-100 border-purple-900';
+                                    else if (count >= 8) badgeClass = 'bg-purple-100 text-purple-700 border-purple-200';
+                                    else badgeClass = 'bg-slate-700 text-slate-300 border-slate-500';
+                                    return `<span onclick="event.stopPropagation(); window.showSessionModal(event, ${it.originalIndex}, '${sc.name}')" class="shrink-0 flex items-center justify-center rounded border font-extrabold px-1.5 py-0.5 text-[clamp(9px,0.8vw,11px)] leading-none shadow-sm ${badgeClass} cursor-pointer hover:brightness-110 active:scale-95 transition-all">${count}회차</span>`;
+                                }).join('<div class="w-0.5"></div>');
+                            }
+
+                            let topRowBtns = '';
+                            if (!isHideBadges) {
+                                let allBtnsHtml = [sessionBadgeHtmlGrid, makeStatBtnGrid('출석', sAttend, 'bg-blue-600'), makeStatBtnGrid('결석', sAbsent, 'bg-red-500'), makeStatBtnGrid('취소', sCancel, 'bg-orange-500'), makeStatBtnGrid('미확인', sUnconfirmed, 'bg-slate-500')].filter(Boolean).join('');
+                                if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-0.5 w-full mb-1.5">${allBtnsHtml}</div>`;
+                            }
+
+                            const uid = 'sched_' + it.originalIndex + '_' + idx;
+                            window.scheduleDetailsMap[uid] = { ...it, displayStatus: sAttend >= 1 ? '완료' : (sAbsent >= 1 ? '결석' : (sCancel >= 1 ? '취소' : '미확인')), badgeClass: 'bg-slate-600 text-white', isExcluded: isGridExcluded, isConsecutiveAssistant: isConsecutiveAssistant };
+
+                            teamHtml += `<div onclick="showScheduleDetail('${uid}')" class="cursor-pointer hover:opacity-80 active:scale-95 transition-all flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border shadow-sm ${cBg} h-[135px] flex-1 w-full">${topRowBtns}<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${it.time}</span>${blinkHtml}</div></div><div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${tDisp}${fullLocText}"><span class="truncate block w-full">${tDisp}${lHtml}</span></div><div class="truncate mt-0.5 leading-tight ${itRawStat ? dColor : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${itRawStat}">${itRawStat || '-'}</div></div>`;
+                        } else {
+                            let tl = idx === 0 ? "9:30~ / 13:00~" : (idx === 1 ? "10:30~ / 14:00~" : "11:30~ / 15:00~");
+                            teamHtml += `<div class="flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border border-slate-700 bg-slate-800/50 shadow-sm h-[135px] flex-1 w-full"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-slate-500 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${tl}</span><span class="min-w-[clamp(48px,4vw,60px)] whitespace-nowrap shrink-0 text-center inline-block px-1.5 py-0.5 bg-slate-700/50 rounded-md border border-slate-600 font-black text-slate-400 shadow-sm leading-none text-[clamp(11px,1.0vw,14px)]">수업없음</span></div><div class="font-black text-slate-600 truncate mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)]">-</div><div class="font-bold truncate text-transparent select-none mt-0.5 leading-tight text-[clamp(11px,1.1vw,18px)]">-</div></div>`;
+                        }
+                    });
+                    teamHtml += `</div></div>`;
+                }
+                teamHtml += `</div>`;
+                return teamHtml;
+            };
+
+            let html12 = renderTeamGrid("1팀") + renderTeamGrid("2팀");
+            document.getElementById('team12GridContainer').innerHTML = html12 || '<div class="text-slate-400 text-center py-10 text-[clamp(16px,1.5vw,24px)]">1, 2팀 일정을 불러오는 중이거나 일정이 없습니다.</div>';
+
+            let html3 = renderTeamGrid("3팀");
+            document.getElementById('team3GridContainer').innerHTML = html3 || '<div class="text-slate-400 text-center py-10 text-[clamp(16px,1.5vw,24px)]">3팀 일정을 불러오는 중이거나 일정이 없습니다.</div>';
+
+            window.buildHtml = function (list, type, filterStr) {
+                if (list.length === 0) return '<div class="text-center py-20 text-gray-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                let html = '';
+                const gridClass = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-[clamp(8px,1vw,14px)]';
+
+                if (type === 'schedule') {
+                    let teamGroups = { '1팀': {}, '2팀': {}, '3팀': {} };
+                    list.forEach(item => {
+                        if (!teamGroups[item.team]) teamGroups[item.team] = {};
+                        let tKey = `${item.group}|${item.name}`;
+                        if (!teamGroups[item.team][tKey]) teamGroups[item.team][tKey] = [];
+                        teamGroups[item.team][tKey].push(item);
+                    });
+
+                    let scheduleHtml = '';
+                    let hasValidCardsTotal = false;
+
+                    for (let teamName in teamGroups) {
+                        let hasValidCardsInTeam = false;
+                        let teamCardsHtml = `<div class="grid ${gridClass}">`;
+
+                        let hBg = 'bg-slate-800'; let hText = 'text-slate-100'; let hBorder = 'border-slate-600';
+                        if (teamName === '1팀') { hBg = 'bg-indigo-900/60'; hBorder = 'border-indigo-500/50'; hText = 'text-indigo-100'; }
+                        else if (teamName === '2팀') { hBg = 'bg-emerald-900/60'; hBorder = 'border-emerald-500/50'; hText = 'text-emerald-100'; }
+                        else if (teamName === '3팀') { hBg = 'bg-purple-900/60'; hBorder = 'border-purple-500/50'; hText = 'text-purple-100'; }
+
+                        for (let tKey in teamGroups[teamName]) {
+                            let tItems = teamGroups[teamName][tKey];
+                            let validHtmlItems = [];
+                            for (let item of tItems) {
+                                let studentName = item.target;
+                                let cleanStudentNameForCheck = studentName.replace(/\s+/g, '');
+                                let rawStatus = (item.status && item.status.trim() !== '-' && item.status.trim() !== '') ? item.status.trim() : '';
+                                let isHideBadgesModal = cleanStudentNameForCheck.includes('대상자발굴') || cleanStudentNameForCheck.includes('자체학습') || rawStatus.replace(/\s+/g, '').includes('휴가');
+                                let isHiddenBadge = isHideBadgesModal || isExcludedCondition(item, studentName);
+                                let isPartial = item.isPartial;
+
+                                let sAttend = item.statAttend || 0; let sAbsent = item.statAbsent || 0; let sCancel = item.statCancel || 0; let sUnconfirmed = item.statUnconfirmed || 0;
+
+                                const makeStatBtnModal = (label, count, activeBgClass) => {
+                                    if (isHideBadgesModal) return '';
+                                    if (count >= 1) return `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${activeBgClass}"><span class="mr-0.5">${label}</span><span>${count}</span></div>`;
+                                    return '';
+                                };
+
+                                let sessionBadgeModalHtml = '';
+                                if (!isHideBadgesModal && item.sessionCounts) {
+                                    sessionBadgeModalHtml = item.sessionCounts.map(sc => {
+                                        let badgeClass = ''; const count = parseInt(sc.count, 10);
+                                        if (count >= 15) badgeClass = 'bg-purple-800 text-purple-100 border-purple-900';
+                                        else if (count >= 8) badgeClass = 'bg-purple-100 text-purple-700 border-purple-200';
+                                        else badgeClass = 'bg-gray-100 text-gray-600 border-gray-300';
+                                        return `<span class="shrink-0 flex items-center justify-center rounded border font-extrabold px-1.5 py-0.5 text-[clamp(9px,0.8vw,11px)] leading-none shadow-sm ${badgeClass}">${count}회차</span>`;
+                                    }).join('<div class="w-0.5"></div>');
+                                }
+
+                                let topRowBtns = '';
+                                if (!isHideBadgesModal) {
+                                    let allBtnsHtml = [sessionBadgeModalHtml, makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-gray-500')].filter(Boolean).join('');
+                                    if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-0.5 w-full mb-1.5">${allBtnsHtml}</div>`;
+                                }
+
+                                if (filterStr === '미확인' && topRowBtns === '') continue;
+
+                                let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                                let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
+                                if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
+                                let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
+                                let nameHtml = `<div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${studentName}${locHtmlStr}"><span class="truncate block w-full">${studentName === '-' ? '대상자 없음' : studentName}${lHtml}</span></div>`;
+
+                                let memoText = window.autoCorrectText(rawStatus);
+                                let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
+                                let memoColorClass = 'text-indigo-300';
+                                const rawStatusCheck2 = rawStatus.replace(/\s+/g, '');
+                                if (rawStatusCheck2.includes('선생님휴가')) memoColorClass = 'text-sky-400 font-bold';
+                                else if (rawStatusCheck2.includes('결석') || rawStatusCheck2.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
+                                let memoHtml = `<div class="truncate mt-0.5 leading-tight ${cleanMemoText ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
+
+                                if (isHiddenBadge && filterStr !== '전체') {
+                                    nameHtml = `<div class="w-full flex flex-col items-center justify-center font-black text-[clamp(14px,1.4vw,20px)] text-slate-300 h-full py-1"><span class="text-center w-full truncate">${studentName === '-' ? '대상자 없음' : studentName}</span></div>`;
+                                    timeHtml = ''; memoHtml = '';
+                                }
+
+                                let cBg = '';
+                                if (rawStatus.replace(/\s+/g, '').includes('휴가')) cBg = 'bg-sky-500/30 border-sky-400/50';
+                                else if (studentName === '-' || cleanStudentNameForCheck.includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
+                                else if (sAttend >= 1) cBg = 'bg-indigo-900 border-indigo-800'; else if (sAbsent >= 1) cBg = 'bg-[#3b1a20] border-[#5c2a33]'; else if (sCancel >= 1) cBg = 'bg-amber-900 border-amber-800'; else cBg = 'bg-slate-700 border-slate-600';
+
+                                // ✅ 선생님 이름이 나오는 하단 줄 제거, 높이 h-[150px] 대신 h-auto 사용
+                                let cardContentHtml = topRowBtns + timeHtml + nameHtml + (!isHiddenBadge || filterStr === '전체' ? memoHtml : '');
+                                let itemHtml = `<div class="${cBg} h-auto px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto">${cardContentHtml}</div>`;
+                                validHtmlItems.push(itemHtml);
+                            }
+
+                            if (validHtmlItems.length > 0) {
+                                hasValidCardsInTeam = true; hasValidCardsTotal = true;
+                                let groupText = `${tItems[0].group} <span class="text-[1.2em] ml-1">${tItems[0].name}</span>`;
+                                for (let i = 0; i < validHtmlItems.length; i += 3) {
+                                    let chunkHtmlArray = validHtmlItems.slice(i, i + 3);
+                                    let cardsHtml = chunkHtmlArray.join('<div class="h-3"></div>');
+                                    teamCardsHtml += `<div class="bg-slate-800 border border-slate-600 p-[clamp(8px,1vw,12px)] rounded-lg flex flex-col h-full overflow-hidden"><div class="font-black ${hText} text-[clamp(14px,1.2vw,18px)] border-b-2 ${hBorder} pb-1.5 mb-2 text-center ${hBg} rounded pt-1">${groupText}</div><div class="flex flex-col flex-grow justify-start items-center w-full">${cardsHtml}</div></div>`;
+                                }
+                            }
+                        }
+
+                        teamCardsHtml += `</div>`;
+
+                        if (hasValidCardsInTeam) {
+                            let teamHeaderColor = '';
+                            if (teamName === '1팀') teamHeaderColor = 'text-indigo-400 border-indigo-500/50'; else if (teamName === '2팀') teamHeaderColor = 'text-emerald-400 border-emerald-500/50'; else if (teamName === '3팀') teamHeaderColor = 'text-purple-400 border-purple-500/50'; else teamHeaderColor = 'text-slate-300 border-slate-600';
+                            scheduleHtml += `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b-2 ${teamHeaderColor} pb-1 font-bold text-[clamp(16px,1.6vw,24px)]">${teamName}</div>`;
+                            scheduleHtml += teamCardsHtml;
+                        }
+                    }
+
+                    if (!hasValidCardsTotal) return '<div class="text-center py-20 text-gray-400 text-[clamp(14px,1.2vw,20px)]">해당 항목에 표시할 데이터가 없습니다.</div>';
+                    html += scheduleHtml;
+                } else if (type === 'teacher') {
+                    html += `<div class="grid ${gridClass}">`;
+                    list.forEach(item => {
+                        let boxClass = item.teacherFinalStatus === '휴가' ? 'bg-orange-100 border-2 border-orange-300' : 'bg-white border-2 border-gray-400';
+                        let textClass = item.teacherFinalStatus === '휴가' ? 'text-orange-900' : 'text-gray-900';
+                        let groupClass = item.teacherFinalStatus === '휴가' ? 'text-orange-700' : 'text-blue-600';
+                        html += `<div class="${boxClass} p-[clamp(8px,1vw,12px)] rounded-lg shadow-sm text-center flex flex-col justify-center items-center h-full"><span class="font-extrabold ${textClass} break-keep w-full text-[clamp(13px,1.2vw,18px)] leading-snug"><span class="${groupClass} font-bold mr-1 block sm:inline text-[clamp(11px,1vw,14px)]">${item.team} ${item.group}</span>${item.name}</span></div>`;
+                    });
+                    html += '</div>';
+                }
+                return html;
+            };
+
+            window.buildHtmlSession = function (list, type, filterStr) {
+                if (list.length === 0) return '<div class="text-center py-20 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                let html = '';
+                const gridClass = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-[clamp(8px,1vw,14px)]';
+
+                let groupedBySession = {};
+                list.forEach(item => {
+                    let grp = item.sessionGroupName;
+                    if (!groupedBySession[grp]) groupedBySession[grp] = [];
+                    groupedBySession[grp].push(item);
+                });
+
+                ['15회 이상', '8~14회', '7회 이하'].forEach(grp => {
+                    if (groupedBySession[grp] && groupedBySession[grp].length > 0) {
+                        let groupCount = groupedBySession[grp].length;
+                        html += `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b-2 border-indigo-500/50 pb-1 flex items-end gap-2"><span class="font-bold text-indigo-300 text-[clamp(16px,1.4vw,22px)]">${grp}</span><span class="text-indigo-400 font-bold text-[clamp(13px,1.2vw,18px)] mb-[1px]">${groupCount}명</span></div><div class="grid ${gridClass}">`;
+
+                        groupedBySession[grp].forEach(item => {
+                            let studentName = item.splitName || '-';
+                            if (studentName === '-' || studentName === '' || studentName.replace(/\s+/g, '').includes('보조강사')) return;
+
+                            let isHiddenBadge = isExcludedCondition(item, studentName);
+                            let rawStatus = (item.status && item.status.trim() !== '-' && item.status.trim() !== '') ? item.status.trim() : '';
+                            let sAttend = item.statAttend || 0; let sAbsent = item.statAbsent || 0; let sCancel = item.statCancel || 0; let sUnconfirmed = item.statUnconfirmed || 0;
+
+                            let cleanStudentNameForCheck = studentName.replace(/\s+/g, '');
+                            let isHideBadgesModal = cleanStudentNameForCheck.includes('대상자발굴') || cleanStudentNameForCheck.includes('자체학습') || rawStatus.replace(/\s+/g, '').includes('휴가');
+
+                            const makeStatBtnModal = (label, count, activeBgClass) => {
+                                if (isHideBadgesModal || count < 1) return '';
+                                return `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${activeBgClass}"><span class="mr-0.5">${label}</span><span>${count}</span></div>`;
+                            };
+
+                            let sessionBadgeModalHtml = '';
+                            if (!isHideBadgesModal && item.sessionCounts) {
+                                sessionBadgeModalHtml = item.sessionCounts.map(sc => {
+                                    let badgeClass = ''; const count = parseInt(sc.count, 10);
+                                    if (count >= 15) badgeClass = 'bg-purple-800 text-purple-100 border-purple-900'; else if (count >= 8) badgeClass = 'bg-purple-100 text-purple-700 border-purple-200'; else badgeClass = 'bg-gray-100 text-gray-600 border-gray-300';
+                                    // ✅ 세션별 모달에서도 뱃지에 클릭 이벤트를 추가
+                                    return `<span onclick="event.stopPropagation(); window.showSessionModal(event, ${item.originalIndex}, '${sc.name}')" class="shrink-0 flex items-center justify-center rounded border font-extrabold px-1.5 py-0.5 text-[clamp(9px,0.8vw,11px)] leading-none shadow-sm ${badgeClass} cursor-pointer hover:brightness-110 active:scale-95 transition-all">${count}회차</span>`;
+                                }).join('<div class="w-0.5"></div>');
+                            }
+
+                            let topRowBtns = '';
+                            if (!isHideBadgesModal) {
+                                let allBtnsHtml = [sessionBadgeModalHtml, makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-gray-500')].filter(Boolean).join('');
+                                if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-0.5 w-full mb-1.5">${allBtnsHtml}</div>`;
+                            }
+
+                            let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                            let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
+                            if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
+                            let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
+                            let nameHtml = `<div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${studentName}${locHtmlStr}"><span class="truncate block w-full">${studentName}${lHtml}</span></div>`;
+
+                            let memoText = window.autoCorrectText(rawStatus);
+                            let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
+                            let memoColorClass = 'text-indigo-300';
+                            if (rawStatus.replace(/\s+/g, '').includes('선생님휴가')) memoColorClass = 'text-slate-400';
+                            else if (rawStatus.replace(/\s+/g, '').includes('결석') || rawStatus.replace(/\s+/g, '').includes('취소') || item.isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
+                            let memoHtml = `<div class="truncate mt-0.5 leading-tight ${cleanMemoText ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
+
+                            if (isHiddenBadge) {
+                                nameHtml = `<div class="w-full flex flex-col items-center justify-center font-black text-[clamp(14px,1.4vw,20px)] text-slate-300 h-full py-1"><span class="text-center w-full truncate">${studentName}</span></div>`;
+                                timeHtml = ''; memoHtml = '';
+                            }
+
+                            let cBg = '';
+                            if (rawStatus.replace(/\s+/g, '').includes('휴가')) cBg = 'bg-slate-800 border-slate-600';
+                            else if (sAttend >= 1) cBg = 'bg-indigo-900 border-indigo-800'; else if (sAbsent >= 1) cBg = 'bg-[#3b1a20] border-[#5c2a33]'; else if (sCancel >= 1) cBg = 'bg-amber-900 border-amber-800'; else cBg = 'bg-slate-700 border-slate-600';
+
+                            // ✅ 선생님 이름이 나오는 하단 줄 제거, 높이 h-[150px] 대신 h-auto 사용
+                            let cardContentHtml = topRowBtns + timeHtml + nameHtml + (!isHiddenBadge ? memoHtml : '');
+                            html += `<div class="${cBg} h-auto px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto">${cardContentHtml}</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                return html;
+            };
+            
+            window.buildHtmlSessionSimple = function(list) {
+                if (list.length === 0) return '<div class="text-center py-20 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                
+                const nameMap = new Map();
+                list.forEach(item => {
+                    let sName = item.splitName || item.name;
+                    if (sName && sName !== '-') nameMap.set(sName, item.sessionCount || 0);
+                });
+                
+                const sortedNames = Array.from(nameMap.keys()).sort((a,b) => a.localeCompare(b, 'ko'));
+                
+                let html = '<div class="p-[clamp(12px,1.5vw,24px)] bg-slate-800/50 rounded-xl border border-slate-600/50 mt-4">';
+                if (sortedNames.length === 0) {
+                    html += '<div class="text-center py-10 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                } else {
+                    html += '<div class="grid grid-cols-4 md:grid-cols-10 gap-[clamp(4px,0.8vw,10px)]">';
+                    sortedNames.forEach(name => {
+                        const count = nameMap.get(name);
+                        html += `<div class="bg-slate-700/80 hover:bg-slate-600 border border-slate-500/50 rounded px-1 py-2 text-center text-slate-200 font-bold text-[clamp(10px,1.1vw,16px)] whitespace-nowrap shadow-sm transition-colors cursor-default" title="${name} (${count}회)">${name} <span class="text-indigo-300 font-normal ml-0.5 text-[0.85em]">${count}회</span></div>`;
+                    });
+                    html += '</div>';
+                }
+                html += '</div>';
+                return html;
+            };
+
+            window.kpiClickHandler = function (type, filter, isLegendClick = false) {
+                if (!window.dashboardData) return;
+                const dData = window.dashboardData;
+                let dataList = [];
+                let titleStr = '';
+
+                if (type === 'teacher') {
+                    dataList = dData.teacherGroups[filter] || [];
+                    if (filter === '전체') titleStr = '전체 선생님 명단';
+                    else if (filter === '출근') titleStr = '출근한 선생님 명단';
+                    else if (filter === '휴가') titleStr = '휴가 선생님 명단';
+                    dataList.sort((a, b) => a.originalIndex - b.originalIndex);
+                    openKpiModal(titleStr, window.buildHtml(dataList, 'teacher', filter), 'kpiCardTeacher', dataList.length);
+                }
+                else if (type === 'trainee') {
+                    let baseList = [...dData.validScheduleGroups['전체']].filter(dData.filterScheduleForGraph);
+                    if (filter === '전체') {
+                        dataList = baseList.filter(it => (it.statAttend + it.statAbsent + it.statCancel + it.statUnconfirmed) > 0);
+                    } else if (filter === '출석') {
+                        dataList = baseList.filter(it => it.statAttend >= 1);
+                    } else if (filter === '결석') {
+                        dataList = baseList.filter(it => it.statAbsent >= 1);
+                    } else if (filter === '취소') {
+                        dataList = baseList.filter(it => it.statCancel >= 1);
+                    } else if (filter === '미확인') {
+                        dataList = baseList.filter(it => it.statUnconfirmed >= 1);
+                    }
+                    titleStr = filter === '전체' ? '교육 대상자 상세' : `교육 대상자 상세 (${filter})`;
+                    dataList.sort((a, b) => a.originalIndex - b.originalIndex);
+                    openKpiModal(titleStr, window.buildHtml(dataList, 'schedule', filter), 'kpiCardTrainee', dataList.length);
+                }
+                else if (type === 'schedule') {
+                    let baseList = [...dData.validScheduleGroups['전체']];
+
+                    if (filter === '전체') {
+                        dataList = baseList;
+                    } else if (filter === '완료') {
+                        dataList = baseList.filter(it => {
+                            let t = (it.target || '').replace(/\s+/g, '');
+                            if (t === '-' || t === '') return false;
+                            return !(it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0);
+                        });
+                    } else if (filter === '미확인') {
+                        dataList = baseList.filter(dData.filterScheduleForGraph).filter(it => {
+                            return it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0;
+                        });
+                    }
+                    titleStr = filter === '전체' ? '전체 일정 내역' : `전체 일정 내역 (${filter})`;
+                    dataList.sort((a, b) => a.originalIndex - b.originalIndex);
+                    openKpiModal(titleStr, window.buildHtml(dataList, 'schedule', filter), 'kpiCardSchedule', dataList.length);
+                }
+                else if (type === 'session') {
+                    dataList = dData.sessionGroups[filter] || [];
+                    
+                    if (isLegendClick) {
+                        titleStr = filter === '전체' ? '회차별 인원 명단 (전체)' : `회차별 인원 명단 (${filter})`;
+                        openKpiModal(titleStr, window.buildHtmlSessionSimple(dataList), 'kpiCardSession', dataList.length);
+                    } else {
+                        titleStr = filter === '전체' ? '회차별 인원 상세' : `회차별 인원 상세 (${filter})`;
+                        const groupOrder = { '15회 이상': 1, '8~14회': 2, '7회 이하': 3 };
+                        dataList.sort((a, b) => {
+                            if (groupOrder[a.sessionGroupName] !== groupOrder[b.sessionGroupName]) {
+                                return groupOrder[a.sessionGroupName] - groupOrder[b.sessionGroupName];
+                            }
+                            return a.splitName.localeCompare(b.splitName, 'ko');
+                        });
+                        openKpiModal(titleStr, window.buildHtmlSession(dataList, 'session', filter), 'kpiCardSession', dataList.length);
+                    }
+                }
+            };
+        }
+
+        const handleCardClick = (e, type) => {
+            if (e.target.closest('.legend-btn')) return;
+            if (window.kpiClickHandler) window.kpiClickHandler(type, '전체');
+        };
+
+        document.getElementById('kpiCardTeacher').onclick = (e) => handleCardClick(e, 'teacher');
+        document.getElementById('kpiCardTrainee').onclick = (e) => handleCardClick(e, 'trainee');
+        document.getElementById('kpiCardSchedule').onclick = (e) => handleCardClick(e, 'schedule');
+        document.getElementById('kpiCardSession').onclick = (e) => handleCardClick(e, 'session');
+
+        document.addEventListener('click', function (e) {
+            const legendBtn = e.target.closest('.legend-btn');
+            if (legendBtn) {
+                const type = legendBtn.dataset.type;
+                const filter = legendBtn.dataset.filter;
+                if (window.kpiClickHandler) {
+                    window.kpiClickHandler(type, filter, true);
+                }
+            }
+        });
+
+        // ✅ 날짜 유효성 검사 (시트에 없거나 공휴일인지 확인)
+        function isValidDate(d) {
+            if (allData.length === 0) return true;
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            
+            for (let i = 0; i < allData.length; i++) {
+                const item = allData[i];
+                if (!item.date) continue;
+                const match = item.date.match(/(\d+)[\/.]\s*(\d+)/);
+                if (match && parseInt(match[1]) === m && parseInt(match[2]) === day) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getNextValidDate(d, direction) {
+            let temp = new Date(d);
+            let limit = 30; // 최대 30일 탐색
+            while (limit > 0) {
+                temp.setDate(temp.getDate() + direction);
+                if (temp.getDay() !== 0 && temp.getDay() !== 6 && isValidDate(temp)) {
+                    return temp;
+                }
+                limit--;
+            }
+            return d; // 못 찾으면 원래 날짜 반환
+        }
+
+        // ✅ 날짜 변경 로직을 함수로 분리 (버튼 및 스와이프 기능에서 공통으로 사용)
+        function goToPrevDay() {
+            currentDateObj = getNextValidDate(currentDateObj, -1);
+            updateDateUI(); renderDashboard();
+        }
+
+        function goToNextDay() {
+            currentDateObj = getNextValidDate(currentDateObj, 1);
+            updateDateUI(); renderDashboard();
+        }
+
+        document.getElementById('prevDayBtn').onclick = goToPrevDay;
+        document.getElementById('nextDayBtn').onclick = goToNextDay;
+
+        document.getElementById('todayBtn').onclick = () => {
+            let today = new Date(); 
+            today.setHours(0, 0, 0, 0);
+            if (today.getDay() === 6) today.setDate(today.getDate() + 2); 
+            else if (today.getDay() === 0) today.setDate(today.getDate() + 1);
+            
+            if (!isValidDate(today)) {
+                let forwardDate = getNextValidDate(today, 1);
+                if (forwardDate.getTime() > today.getTime()) {
+                    today = forwardDate;
+                } else {
+                    today = getNextValidDate(today, -1);
+                }
+            }
+            currentDateObj = today;
+            updateDateUI(); renderDashboard();
+        };
+
+        // ✅ 터치 슬라이드(스와이프)로 날짜 변경 기능
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            // 설정 창이나 상세 모달이 열려있을 때는 스와이프 날짜 변경 기능 무시
+            const setupState = document.getElementById('setupState');
+            const kpiModal = document.getElementById('kpiModal');
+            const sessionModal = document.getElementById('sessionModal');
+
+            if (!setupState.classList.contains('hidden') ||
+                !kpiModal.classList.contains('hidden') ||
+                !sessionModal.classList.contains('hidden')) {
+                return;
+            }
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            // X축(가로) 이동 거리가 Y축(세로) 이동 거리보다 크고, 최소 50px 이상 이동했을 때만 스와이프 인식 (오작동 방지)
+            if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    // 오른쪽으로 스와이프 -> 이전 날짜 (어제 혹은 지난 금요일)
+                    goToPrevDay();
+                } else {
+                    // 왼쪽으로 스와이프 -> 다음 날짜 (내일 혹은 다음 월요일)
+                    goToNextDay();
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

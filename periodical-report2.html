@@ -1,0 +1,2471 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>기간별 교육 진행 현황 - 통합 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        @media (min-width: 1536px) {
+            ::-webkit-scrollbar {
+                width: 14px;
+                height: 14px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                border-radius: 7px;
+            }
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-modalFadeIn {
+            animation: modalFadeIn 0.2s ease-out forwards;
+        }
+
+        .pt-safe-4 {
+            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+        }
+
+        .gauge-path {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+
+        .word-chip {
+            transition: all 0.2s ease-in-out;
+            cursor: default;
+        }
+
+        .word-chip:hover {
+            transform: scale(1.1);
+            filter: brightness(0.9);
+        }
+
+        input[type="text"]:focus {
+            background-color: #f8fafc;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            cursor: pointer;
+            color: transparent;
+            background: transparent;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .calendar-day {
+            background-color: #0f172a;
+            padding: 4px; /* 셀 내부 여백 최소화 */
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px; /* 항목 간 간격 축소 */
+        }
+
+        .calendar-header-day {
+            background-color: #1e293b;
+            padding: 4px; /* 헤더 여백도 같이 축소 */
+            text-align: center;
+            font-weight: bold;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-date {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+
+        .calendar-stat-item {
+            font-size: clamp(9px, 2.5vw, 12px); /* 모바일에서는 폰트를 작게, 큰 화면은 12px 유지 */
+            padding: 2px 4px; /* 좌우 패딩을 대폭 줄여서 공간 확보 */
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap; /* 줄바꿈 절대 방지 */
+            letter-spacing: -0.5px; /* 자간을 살짝 줄여서 한 줄에 잘 들어가게 조치 */
+        }
+
+        .calendar-stat-teacher-attended {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+        }
+
+        .calendar-stat-teacher-vacation {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #7dd3fc;
+        }
+
+        .calendar-stat-trainee-attended {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #86efac;
+        }
+
+        .calendar-stat-trainee-absent {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        .calendar-stat-trainee-cancel {
+            background-color: rgba(251, 191, 36, 0.15);
+            color: #fde047;
+        }
+
+        .calendar-stat-trainee-unconfirmed {
+            background-color: rgba(156, 163, 175, 0.15);
+            color: #d1d5db;
+        }
+
+        .calendar-stat-schedule-completed {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+        }
+
+        .calendar-stat-schedule-unconfirmed {
+            background-color: rgba(156, 163, 175, 0.15);
+            color: #d1d5db;
+        }
+
+        .calendar-stat-session-15plus {
+            background-color: rgba(168, 85, 247, 0.15);
+            color: #d8b4fe;
+        }
+
+        .calendar-stat-session-8to14 {
+            background-color: rgba(249, 115, 22, 0.15);
+            color: #fdba74;
+        }
+
+        .calendar-stat-session-7minus {
+            background-color: rgba(14, 165, 233, 0.15);
+            color: #7dd3fc;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 font-sans text-slate-100 min-h-screen relative overflow-x-hidden">
+
+    <!-- 프리미엄 다크 모드 배경 -->
+    <div class="fixed inset-0 z-[-1] bg-slate-950">
+        <div
+            class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+        </div>
+        <div class="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-indigo-900/20 to-transparent"></div>
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900/20 blur-[120px] rounded-full mix-blend-screen animate-pulse"
+            style="animation-duration: 8s;"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-purple-900/10 blur-[150px] rounded-full mix-blend-screen animate-pulse"
+            style="animation-duration: 12s;"></div>
+    </div>
+
+    <!-- 전체 로딩 팝업 -->
+    <div id="globalLoader"
+        class="fixed inset-0 bg-black/60 z-[10000] hidden flex-col items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+        <div
+            class="bg-slate-800/90 backdrop-blur-xl px-10 py-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-white/10 flex flex-col items-center transform scale-100 animate-modalFadeIn">
+            <svg class="w-16 h-16 text-indigo-500 animate-spin mb-4 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <div class="text-2xl font-bold text-slate-100 tracking-tight text-center drop-shadow-md">요약 및 상세 데이터를 읽고
+                있습니다...</div>
+            <div class="text-indigo-300 font-medium mt-2">잠시만 기다려주세요</div>
+        </div>
+    </div>
+
+    <!-- 백그라운드 동기화 팝업 -->
+    <div id="syncPopup" class="fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none">
+        <div
+            class="bg-slate-800/90 backdrop-blur-xl px-8 py-6 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] flex flex-col items-center transform scale-100 animate-modalFadeIn border border-white/10 pointer-events-auto">
+            <svg class="w-12 h-12 text-indigo-500 animate-spin mb-3 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <div class="text-xl font-bold text-slate-100 tracking-tight drop-shadow-md">데이터 동기화 중...</div>
+        </div>
+    </div>
+
+    <!-- 헤더 -->
+    <header
+        class="bg-slate-900/60 backdrop-blur-xl border-b border-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)] mb-2 relative z-20">
+        <div
+            class="w-[98%] max-w-[2400px] mx-auto px-[clamp(4px,1vw,16px)] pb-[clamp(6px,1vw,16px)] pt-safe-4 flex flex-row items-center justify-between gap-[clamp(2px,1vw,16px)] flex-nowrap">
+            <div class="flex flex-col items-start text-left shrink min-w-0">
+                <div class="flex items-center mb-[clamp(2px,0.5vw,4px)] shrink min-w-0">
+                    <img src="Logo_of_Seoul.png" alt="서울시 로고"
+                        class="h-[clamp(14px,3vw,48px)] bg-slate-800/80 border border-white/10 px-[clamp(2px,0.5vw,8px)] py-[clamp(2px,0.5vw,4px)] rounded-[clamp(2px,0.5vw,6px)] object-contain mr-[clamp(4px,1vw,8px)] shrink-0 shadow-lg"
+                        onerror="this.style.display='none'">
+                    <h1
+                        class="font-bold text-[clamp(11px,2.5vw,36px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
+                        성동노인종합복지관</h1>
+                </div>
+                <p
+                    class="font-bold text-yellow-300 text-[clamp(10px,2.2vw,30px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
+                    디지털교육 서포터즈</p>
+                <h1
+                    class="font-bold mt-[clamp(4px,1vw,20px)] flex items-center justify-start gap-[clamp(2px,1vw,16px)] text-[clamp(12px,3.2vw,48px)] whitespace-nowrap leading-none shrink min-w-0 overflow-hidden">
+                    <svg class="w-[clamp(12px,3.2vw,48px)] h-[clamp(12px,3.2vw,48px)] text-white shrink-0"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M3 3v18h18" />
+                        <path d="M18 17V9" />
+                        <path d="M13 17V5" />
+                        <path d="M8 17v-3" />
+                    </svg>
+                    <span class="shrink min-w-0 truncate">기간별 교육 진행 현황</span>
+                    <span id="syncIndicator"
+                        class="ml-1 w-[clamp(6px,1vw,12px)] h-[clamp(6px,1vw,12px)] bg-green-400 rounded-full animate-pulse opacity-0 transition-opacity shrink-0"
+                        title="동기화 중"></span>
+                </h1>
+            </div>
+
+            <div
+                class="flex flex-row flex-nowrap items-center justify-end ml-auto gap-[clamp(4px,1vw,16px)] shrink min-w-0">
+                <div id="periodNavigation"
+                    class="hidden flex flex-row flex-nowrap items-center justify-center gap-[clamp(2px,0.5vw,16px)] bg-slate-800/50 p-[clamp(2px,0.8vw,12px)] rounded-[clamp(4px,1vw,12px)] border-[1.5px] border-indigo-500/50 shadow-inner shrink min-w-0">
+                    <div
+                        class="flex flex-nowrap items-center bg-slate-800 rounded-[clamp(3px,0.8vw,8px)] border border-slate-600 focus-within:border-indigo-400 hover:border-indigo-400 transition-colors shadow-sm shrink min-w-0 overflow-hidden">
+                        <input type="text" id="startDateText"
+                            class="w-[clamp(42px,10vw,140px)] bg-transparent text-center text-indigo-300 font-black text-[clamp(8px,1.6vw,24px)] tracking-tighter outline-none pl-[clamp(2px,1vw,20px)] py-[clamp(2px,0.8vw,12px)] shrink min-w-0"
+                            placeholder="MM-DD">
+                        <div
+                            class="relative flex items-center justify-center px-[clamp(2px,1vw,24px)] py-[clamp(2px,0.8vw,16px)] shrink-0 bg-slate-700/50">
+                            <svg class="w-[clamp(8px,2vw,24px)] h-[clamp(8px,2vw,24px)] text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                            <input type="date" id="startDate"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="달력 보기">
+                        </div>
+                    </div>
+                    <span
+                        class="text-indigo-400 font-extrabold text-[clamp(8px,2vw,24px)] shrink-0 mx-[clamp(1px,0.5vw,4px)]">~</span>
+                    <div
+                        class="flex flex-nowrap items-center bg-slate-800 rounded-[clamp(3px,0.8vw,8px)] border border-slate-600 focus-within:border-indigo-400 hover:border-indigo-400 transition-colors shadow-sm shrink min-w-0 overflow-hidden">
+                        <input type="text" id="endDateText"
+                            class="w-[clamp(42px,10vw,140px)] bg-transparent text-center text-indigo-300 font-black text-[clamp(8px,1.6vw,24px)] tracking-tighter outline-none pl-[clamp(2px,1vw,20px)] py-[clamp(2px,0.8vw,12px)] shrink min-w-0"
+                            placeholder="MM-DD">
+                        <div
+                            class="relative flex items-center justify-center px-[clamp(2px,1vw,24px)] py-[clamp(2px,0.8vw,16px)] shrink-0 bg-slate-700/50">
+                            <svg class="w-[clamp(8px,2vw,24px)] h-[clamp(8px,2vw,24px)] text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                            <input type="date" id="endDate"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" title="달력 보기">
+                        </div>
+                    </div>
+                    <div class="relative flex flex-col items-center shrink-0 ml-[clamp(2px,0.5vw,8px)]">
+                        <button id="applyPeriodBtn"
+                            class="px-[clamp(6px,1.5vw,32px)] py-[clamp(2px,0.8vw,12px)] bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-[clamp(3px,0.8vw,8px)] transition-colors shadow-md shadow-indigo-500/30 active:scale-95 text-[clamp(9px,1.8vw,24px)] whitespace-nowrap shrink-0">
+                            조회
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-nowrap items-center shrink-0">
+                    <a href="index.html"
+                        class="flex flex-col items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 p-[clamp(3px,1vw,16px)] rounded-[clamp(4px,1vw,16px)] shadow-lg transition-all active:scale-95 min-w-[clamp(35px,5vw,120px)] shrink-0 no-underline">
+                        <svg class="w-[clamp(12px,2.5vw,40px)] h-[clamp(12px,2.5vw,40px)] mb-[clamp(1px,0.2vw,4px)] shrink-0"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                        <span class="font-bold text-[clamp(7.5px,1.3vw,20px)] whitespace-nowrap">처음으로</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-[98%] max-w-[2400px] mx-auto space-y-[clamp(8px,1vw,16px)] px-2">
+        <div id="setupState"
+            class="hidden bg-slate-900/60 backdrop-blur-xl p-[clamp(32px,3vw,48px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col items-center justify-center min-h-[400px]">
+            <div class="max-w-2xl 2xl:max-w-5xl w-full">
+                <h2
+                    class="font-bold text-slate-100 mb-[clamp(16px,2vw,24px)] text-center text-[clamp(24px,3vw,48px)] drop-shadow-sm">
+                    구글 시트 연동 설정</h2>
+                <div class="space-y-[clamp(16px,2vw,32px)] mb-8">
+                    <div
+                        class="bg-indigo-900/40 border border-indigo-500/50 text-indigo-100 p-4 rounded-xl text-[clamp(13px,1.2vw,16px)] leading-relaxed shadow-sm">
+                        <p class="font-bold mb-1 text-indigo-300">💡 데이터 최적화 구조 안내</p>
+                        <p class="opacity-90">선생님, 대상자, 일정 수 데이터는 <b>[집계 요약 시트]</b>에서 불러옵니다. 단, '회차별 인원 추이'와 '핵심 키워드'
+                            분석을 위해 <b>[1, 2, 3팀 상세 시트]</b> 데이터도 함께 분석합니다.</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">1. 집계/요약 데이터 시트
+                            (차트 3종용)</label>
+                        <input type="text" id="summaryUrl"
+                            class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
+                            value="https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=43019844#gid=43019844">
+                    </div>
+                    <div class="border-t border-white/10 pt-4">
+                        <label class="block font-bold text-slate-300 mb-2 text-[clamp(14px,1.5vw,24px)]">2. 상세 데이터 시트
+                            (회차/키워드 분석용)</label>
+                        <div class="space-y-2">
+                            <input type="text" id="url1"
+                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
+                                placeholder="1팀 주소">
+                            <input type="text" id="url2"
+                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
+                                placeholder="2팀 주소">
+                            <input type="text" id="url3"
+                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
+                                placeholder="3팀 주소">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button id="fetchDataBtn"
+                        class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg text-[clamp(16px,1.5vw,24px)] shadow-lg hover:bg-indigo-500 transition">저장
+                        및 업데이트</button>
+                    <button id="hideSetupBtn"
+                        class="px-6 py-2 bg-slate-700 text-slate-200 font-bold border border-slate-600 rounded-lg text-[clamp(16px,1.5vw,24px)] hover:bg-slate-600 transition">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardContent" class="space-y-[clamp(8px,1vw,16px)] pb-4">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-[clamp(8px,1vw,16px)]">
+                <div id="kpiCardTeacher"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-pointer flex flex-col hover:shadow-md transition-all active:scale-95">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)]">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-indigo-900/50 rounded-lg text-indigo-400 border border-indigo-500/50 shadow-inner">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">출근한 선생님 (누적)</p>
+                            <p class="font-black text-white leading-none tracking-tight text-[clamp(30px,3vw,48px)]">
+                                <span id="kpiTeacher">-</span><span
+                                    class="ml-1 text-slate-400 font-medium text-[clamp(16px,1.5vw,24px)]">명</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="gaugeTeacher" class="w-full flex-grow flex items-start"></div>
+                </div>
+
+                <div id="kpiCardTrainee"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-pointer flex flex-col hover:shadow-md transition-all active:scale-95">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)]">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-emerald-900/50 rounded-lg text-emerald-400 border border-emerald-500/50 shadow-inner">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">교육 대상자 수 (누적)</p>
+                            <p class="font-black text-white leading-none tracking-tight text-[clamp(30px,3vw,48px)]">
+                                <span id="kpiTrainee">-</span><span
+                                    class="ml-1 text-slate-400 font-medium text-[clamp(16px,1.5vw,24px)]">명</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="gaugeTrainee" class="w-full flex-grow flex items-start"></div>
+                </div>
+
+                <div id="kpiCardSchedule"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-pointer flex flex-col hover:shadow-md transition-all active:scale-95">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)]">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-purple-900/50 rounded-lg text-purple-400 border border-purple-500/50 shadow-inner">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                                <line x1="16" x2="16" y1="2" y2="6" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">일정 수 (누적)</p>
+                            <p class="font-black text-white leading-none tracking-tight text-[clamp(30px,3vw,48px)]">
+                                <span id="kpiSchedule">-</span><span
+                                    class="ml-1 text-slate-400 font-medium text-[clamp(16px,1.5vw,24px)]">건</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="gaugeSchedule" class="w-full flex-grow flex items-start"></div>
+                </div>
+
+                <div id="kpiCardSession"
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 cursor-pointer flex flex-col hover:shadow-md transition-all active:scale-95">
+                    <div class="flex items-center gap-[clamp(12px,1.5vw,24px)]">
+                        <div
+                            class="p-[clamp(12px,1.5vw,20px)] bg-orange-900/50 rounded-lg text-orange-400 border border-orange-500/50 shadow-inner">
+                            <svg class="w-[clamp(28px,3vw,48px)] h-[clamp(28px,3vw,48px)]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원 (조회 기간 기준)</p>
+                            <p class="font-black text-white leading-none tracking-tight text-[clamp(30px,3vw,48px)]">
+                                <span id="kpiSession">-</span><span
+                                    class="ml-1 text-slate-400 font-medium text-[clamp(16px,1.5vw,24px)]">명</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="gaugeSession" class="w-full flex-grow flex items-start justify-center"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-[clamp(8px,1vw,16px)]">
+
+                <div
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-blue-500"></span>주간 선생님 출근 트렌드
+                        </h3>
+                        <select id="trendSelectTeacher"
+                            class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-indigo-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
+                            <option value="전체">전체</option>
+                            <option value="출근">출근</option>
+                            <option value="휴가">휴가</option>
+                        </select>
+                    </div>
+                    <div class="relative w-full h-[180px] 2xl:h-[240px]"><canvas id="trendChartTeacher"></canvas></div>
+                </div>
+
+                <div
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-green-500"></span>주간 교육 대상자 수 트렌드
+                        </h3>
+                        <select id="trendSelectTrainee"
+                            class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-emerald-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
+                            <option value="전체">전체</option>
+                            <option value="출석">출석</option>
+                            <option value="결석">결석</option>
+                            <option value="취소">취소</option>
+                            <option value="미확인">미확인</option>
+                        </select>
+                    </div>
+                    <div class="relative w-full h-[180px] 2xl:h-[240px]"><canvas id="trendChartTrainee"></canvas></div>
+                </div>
+
+                <div
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-purple-500"></span>주간 일정 수 트렌드
+                        </h3>
+                        <select id="trendSelectSchedule"
+                            class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-purple-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
+                            <option value="전체">전체</option>
+                            <option value="완료">완료(출석)</option>
+                            <option value="미확인">미확인</option>
+                        </select>
+                    </div>
+                    <div class="relative w-full h-[180px] 2xl:h-[240px]"><canvas id="trendChartSchedule"></canvas></div>
+                </div>
+
+                <div
+                    class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-orange-500"></span>주간 인원 트렌드
+                        </h3>
+                        <div
+                            class="flex items-center gap-1 bg-orange-900/30 px-2 py-1 rounded-lg border border-orange-500/30 shadow-inner">
+                            <input type="number" id="sessionMin" value="1" min="1"
+                                class="w-[clamp(35px,3.5vw,45px)] text-center border border-slate-600 rounded focus:border-orange-400 outline-none font-bold text-slate-200 text-[clamp(12px,1.2vw,14px)] bg-slate-800 py-0.5">
+                            <span class="text-orange-400 text-[clamp(11px,1.1vw,14px)] font-bold">~</span>
+                            <input type="number" id="sessionMax" value="15" min="1"
+                                class="w-[clamp(35px,3.5vw,45px)] text-center border border-slate-600 rounded focus:border-orange-400 outline-none font-bold text-slate-200 text-[clamp(12px,1.2vw,14px)] bg-slate-800 py-0.5">
+                            <span
+                                class="text-orange-400 text-[clamp(11px,1.1vw,13px)] font-bold whitespace-nowrap">회차</span>
+                        </div>
+                    </div>
+                    <div class="relative w-full h-[180px] 2xl:h-[240px]"><canvas id="trendChartSession"></canvas></div>
+                </div>
+            </div>
+
+            <!-- 워드 클라우드 영역 -->
+            <div
+                class="bg-slate-900/60 backdrop-blur-xl p-[clamp(8px,1vw,16px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col mt-4">
+                <h3
+                    class="font-bold text-slate-100 mb-2 border-b border-white/10 pb-1 flex items-center justify-between select-none text-[clamp(18px,1.8vw,30px)]">
+                    <div class="flex items-center gap-2">
+                        <span class="text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]">📱</span> 조회 기간 핵심 교육
+                        키워드
+                    </div>
+                </h3>
+                <div id="wordCloudContainer"
+                    class="min-h-[120px] 2xl:min-h-[220px] flex flex-wrap justify-center items-center gap-[clamp(12px,1.5vw,24px)] p-4 transition-all duration-300">
+                    <div class="text-slate-400 animate-pulse text-[clamp(16px,1.5vw,24px)]">교육 내역을 분석하고 있습니다...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 모달 창 (상세 내역 보기용) -->
+    <!-- 여기 px-4를 px-1 sm:px-4로 바꿔서 모바일에서 모달의 좌우 낭비 공간을 최소화했어 -->
+    <div id="kpiModal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 px-1 sm:px-4">
+        <div
+            class="bg-slate-900 rounded-2xl 2xl:rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-white/10 max-w-6xl w-[95%] flex flex-col overflow-hidden animate-modalFadeIn modal-container">
+            <div
+                class="bg-gradient-to-r from-indigo-900 to-slate-900 border-b border-indigo-500/30 py-[clamp(12px,1.5vw,24px)] px-[clamp(20px,2vw,32px)] flex justify-between items-center text-white">
+                <h3 id="kpiModalTitle" class="font-bold text-[clamp(18px,2vw,30px)] text-indigo-100 tracking-tight">상세
+                    내역</h3>
+                <button id="closeKpiModalBtn" class="hover:text-indigo-300 transition-colors pointer-events-auto">
+                    <svg class="w-[clamp(24px,2.5vw,40px)] h-[clamp(24px,2.5vw,40px)] drop-shadow-lg" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="kpiModalContent"
+                class="p-[clamp(12px,1.5vw,24px)] max-h-[75vh] overflow-y-auto bg-slate-900 flex flex-col gap-[clamp(8px,1vw,16px)] transform-gpu will-change-transform overscroll-contain">
+            </div>
+            <div class="p-4 bg-slate-800/80 border-t border-white/10"><button id="closeKpiModalBtn2"
+                    class="w-full py-[clamp(12px,1.5vw,20px)] bg-slate-700/80 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-white transition-colors text-[clamp(16px,1.5vw,24px)] shadow-lg">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // 1. Globals & Setup
+        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhBeZLvIH9Nj9FwcFzF_9mdV0SXYfCxgQvdguSw-iUSWHu3UKNbgg5ShgvTTJ5Krnf3Q/exec";
+        let globalSummaryData = [];
+        let globalFilteredSummaryData = [];
+        let allData = [];
+        let isFetching = false;
+        let isDatesInitialized = false;
+        let autoSyncInterval = null;
+        window.scheduleDetailsMap = {};
+
+        let chartTeacher = null, chartTrainee = null, chartSchedule = null, chartSession = null;
+        let globalDataTeacher = {}, globalDataTrainee = {}, globalDataSchedule = {}, globalDataSession = [], globalWeeklyLabels = [];
+
+        const defaultUrls = [
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=1364276211#gid=1364276211",
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=163438723#gid=163438723",
+            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=0#gid=0"
+        ];
+
+        const setupState = document.getElementById('setupState');
+        const dashboardContent = document.getElementById('dashboardContent');
+        const fetchDataBtn = document.getElementById('fetchDataBtn');
+        const hideSetupBtn = document.getElementById('hideSetupBtn');
+        const syncIndicator = document.getElementById('syncIndicator');
+        const kpiModal = document.getElementById('kpiModal');
+        const kpiModalTitle = document.getElementById('kpiModalTitle');
+        const kpiModalContent = document.getElementById('kpiModalContent');
+        const inputs = [document.getElementById('url1'), document.getElementById('url2'), document.getElementById('url3')];
+        const applyPeriodBtn = document.getElementById('applyPeriodBtn');
+        let currentOpenCategory = null;
+
+        // 2. Utility Functions
+        window.showToast = function (message, isError = false) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `px-[clamp(16px,1.5vw,24px)] py-[clamp(12px,1vw,16px)] rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/10 text-slate-100 font-bold text-[clamp(14px,1.2vw,18px)] transition-all duration-300 transform translate-y-10 opacity-0 flex items-center gap-2 backdrop-blur-md ${isError ? 'bg-rose-600/90' : 'bg-slate-800/90'}`;
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <div>${message}</div>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 6000);
+        };
+
+        window.autoCorrectText = function (text) {
+            if (!text || typeof text !== 'string') return text;
+            let corrected = text;
+            corrected = corrected.replace(/제미나(?!이)/g, '제미나이');
+            corrected = corrected.replace(/와이파(?!이)|wifi/gi, '와이파이');
+            corrected = corrected.replace(/삼성페(?!이)/g, '삼성페이');
+            corrected = corrected.replace(/네이버페(?!이)/g, '네이버페이');
+            corrected = corrected.replace(/카카오페(?!이)/g, '카카오페이');
+            corrected = corrected.replace(/토스페(?!이)/g, '토스페이');
+            corrected = corrected.replace(/애플페(?!이)/g, '애플페이');
+            corrected = corrected.replace(/네이버지(?!도)/g, '네이버지도');
+            corrected = corrected.replace(/카카오지(?!도)/g, '카카오지도');
+            corrected = corrected.replace(/구글지(?!도)/g, '구글지도');
+            corrected = corrected.replace(/유투브|유트브|너튜브/g, '유튜브');
+            corrected = corrected.replace(/카톡|까톡|카카오(?!톡|지|페|맵|T|티|뱅)/g, '카카오톡');
+            corrected = corrected.replace(/쳇gpt|챗지피티|채지피티|chatgpt/gi, '챗GPT');
+            corrected = corrected.replace(/스마터폰|핸드폰/g, '스마트폰');
+            corrected = corrected.replace(/큐오스크|무인기/g, '키오스크');
+            corrected = corrected.replace(/어플리케이션|어플/g, '앱');
+            return corrected;
+        };
+
+        function getCsvUrl(url) {
+            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            const gidMatch = url.match(/gid=([0-9]+)/);
+            if (match) {
+                let csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
+                if (gidMatch) csvUrl += `&gid=${gidMatch[1]}`;
+                csvUrl += `&t=${Date.now()}`;
+                return csvUrl;
+            }
+            return null;
+        }
+
+        function getWeekLabel(d) {
+            const date = new Date(d);
+            date.setHours(0, 0, 0, 0);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            date.setDate(diff);
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${mm}.${dd}`;
+        }
+
+        const isExcludedCondition = (item, name = '') => {
+            const kws = ['대상자발굴', '수업준비', '복지관이동', '복지관으로이동', '이동시간', '자체학습', '선생님휴가', '휴가'];
+            const targetStr = (item.target || '').replace(/\s+/g, '');
+            const statusStr = (item.status || '').replace(/\s+/g, '');
+            const nameStr = (name || '').replace(/\s+/g, '');
+            const locationStr = (item.location || '').replace(/\s+/g, '');
+            
+            // 기존 제외 키워드 체크
+            if (kws.some(kw => targetStr.includes(kw) || statusStr.includes(kw) || nameStr.includes(kw))) return true;
+            
+            // 새 제외 조건: 학생이름에 '간담회' 또는 장소에 '소양교육' 포함
+            if (targetStr.includes('간담회') || nameStr.includes('간담회')) return true;
+            if (locationStr.includes('소양교육')) return true;
+            
+            return false;
+        };
+
+        // 3. Modals Handling
+        function openKpiModal(title, htmlContent, category, isUpdate = false) {
+            if (!isUpdate && !kpiModal.classList.contains('hidden') && currentOpenCategory === category) { closeKpiModal(); return; }
+            kpiModalTitle.textContent = title;
+            kpiModalContent.innerHTML = htmlContent;
+            const container = kpiModal.querySelector('.modal-container');
+            container.classList.remove('max-w-2xl', 'max-w-3xl', 'max-w-4xl', 'max-w-5xl', 'max-w-6xl', 'max-w-7xl', '2xl:max-w-[70vw]', '2xl:max-w-[80vw]', 'w-[90%]', 'w-[95%]', 'w-[96%]', 'w-[98%]', 'max-w-[96vw]', 'max-w-[85vw]', 'max-w-[95vw]', 'max-w-[98vw]', 'max-w-[1200px]', 'max-w-[1300px]', 'max-w-[1600px]', 'max-w-[1800px]', 'max-w-[800px]', 'w-[70%]');
+
+            // 달력 모달의 경우 스마트폰 가로 너비를 98%까지 꽉 채우도록 설정 (w-[98%])
+            if (category === 'calendar') {
+                container.classList.add('w-[98%]', 'max-w-[1200px]'); 
+            } else {
+                container.classList.add('w-[98%]', 'max-w-[1800px]');
+            }
+
+            kpiModal.classList.remove('hidden');
+            currentOpenCategory = category;
+        }
+
+        function closeKpiModal() { kpiModal.classList.add('hidden'); currentOpenCategory = null; }
+
+        window.showScheduleDetail = function (uid) {
+            const detail = window.scheduleDetailsMap[uid];
+            if (detail) {
+                const loc = detail.location && detail.location !== '-' ? ` (${detail.location})` : '';
+                const target = detail.target && detail.target !== '-' ? detail.target : '대상자 없음';
+                window.showToast(`[${detail.displayStatus}] ${detail.time} - ${detail.name} 선생님<br>대상: ${target}${loc}`, false);
+            }
+        };
+
+        window.showSessionModal = window.showSessionModal || function (event) {
+            event.stopPropagation();
+            window.showToast("기간별 현황 화면에서는 개별 출석 날짜 조회를 지원하지 않습니다.", false);
+        };
+
+        document.getElementById('closeKpiModalBtn').onclick = closeKpiModal;
+        document.getElementById('closeKpiModalBtn2').onclick = closeKpiModal;
+        document.getElementById('hideSetupBtn').onclick = () => { setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden'); };
+
+        // 4. Date Logic
+        window.updateDateDisplay = function (dateInputId, textInputId) {
+            const dateInput = document.getElementById(dateInputId);
+            const textInput = document.getElementById(textInputId);
+            if (dateInput && dateInput.value && textInput) {
+                const d = new Date(dateInput.value);
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                const day = days[d.getDay()];
+                textInput.value = `${mm}-${dd}(${day})`;
+            }
+        };
+
+        window.handleWeekendSelection = function (dateInputId, textInputId) {
+            const dateInput = document.getElementById(dateInputId);
+            if (!dateInput || !dateInput.value) return;
+            let d = new Date(dateInput.value);
+            let isWeekend = false;
+
+            if (d.getDay() === 6) { d.setDate(d.getDate() + 2); isWeekend = true; }
+            else if (d.getDay() === 0) { d.setDate(d.getDate() + 1); isWeekend = true; }
+
+            if (isWeekend) {
+                const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                dateInput.value = fmt(d);
+                window.showToast("주말은 선택할 수 없어 다음 근무일(월요일)로 자동 변경되었습니다.", false);
+            }
+            window.updateDateDisplay(dateInputId, textInputId);
+        };
+
+        window.handleTextDateEdit = function (textInputId, dateInputId) {
+            const textInput = document.getElementById(textInputId);
+            const dateInput = document.getElementById(dateInputId);
+
+            textInput.addEventListener('focus', () => { textInput.value = textInput.value.replace(/\([^)]+\)/g, '').trim(); });
+            textInput.addEventListener('blur', () => {
+                const rawVal = textInput.value.replace(/\([^)]+\)/g, '').trim();
+                let mm, dd;
+                
+                const parts = rawVal.split(/[^0-9]+/);
+                if (parts.length >= 2 && parts[0] && parts[1]) {
+                    mm = parseInt(parts[0], 10);
+                    dd = parseInt(parts[1], 10);
+                } else {
+                    const textVal = rawVal.replace(/[^0-9]/g, '');
+                    if (textVal.length === 3) { 
+                        mm = parseInt(textVal.substring(0, 1), 10); 
+                        dd = parseInt(textVal.substring(1), 10); 
+                    }
+                    else if (textVal.length === 4) { 
+                        mm = parseInt(textVal.substring(0, 2), 10); 
+                        dd = parseInt(textVal.substring(2), 10); 
+                    }
+                }
+
+                if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+                    let yyyy = new Date(dateInput.value).getFullYear();
+                    if (isNaN(yyyy)) yyyy = new Date().getFullYear();
+                    const newDateStr = `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+                    const checkDate = new Date(newDateStr);
+                    if (!isNaN(checkDate.getTime())) {
+                        dateInput.value = newDateStr;
+                    }
+                }
+                window.handleWeekendSelection(dateInputId, textInputId);
+            });
+            textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') textInput.blur(); });
+        };
+
+        document.getElementById('startDate').addEventListener('change', () => window.handleWeekendSelection('startDate', 'startDateText'));
+        document.getElementById('endDate').addEventListener('change', () => window.handleWeekendSelection('endDate', 'endDateText'));
+
+        window.handleTextDateEdit('startDateText', 'startDate');
+        window.handleTextDateEdit('endDateText', 'endDate');
+
+        function initializeDates() {
+            if (allData.length === 0 && globalSummaryData.length === 0) return;
+            const validDates = globalSummaryData.map(d => d.dateObj).sort((a, b) => a - b);
+            if (validDates.length > 0) {
+                const firstDate = validDates[0];
+                // 종료일: 오늘 (주말이면 직전 금요일)
+                const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
+                const dow = todayDate.getDay();
+                if (dow === 6) todayDate.setDate(todayDate.getDate() - 1); // 토 → 금
+                else if (dow === 0) todayDate.setDate(todayDate.getDate() - 2); // 일 → 금
+
+                const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                document.getElementById('startDate').value = fmt(firstDate);
+                document.getElementById('endDate').value = fmt(todayDate);
+
+                window.updateDateDisplay('startDate', 'startDateText');
+                window.updateDateDisplay('endDate', 'endDateText');
+            }
+            document.getElementById('periodNavigation').classList.remove('hidden');
+        }
+
+        // 5. Chart Filters
+        window.loadChartFilters = function () {
+            const saved = localStorage.getItem('trendChartFilters');
+            if (saved) {
+                try {
+                    const filters = JSON.parse(saved);
+                    if (filters.teacher) document.getElementById('trendSelectTeacher').value = filters.teacher;
+                    if (filters.trainee) document.getElementById('trendSelectTrainee').value = filters.trainee;
+                    if (filters.schedule) document.getElementById('trendSelectSchedule').value = filters.schedule;
+                    if (filters.sessionMin) document.getElementById('sessionMin').value = filters.sessionMin;
+                    if (filters.sessionMax) document.getElementById('sessionMax').value = filters.sessionMax;
+                } catch (e) { console.error('Error loading filters', e); }
+            }
+        };
+
+        window.saveChartFilters = function () {
+            const filters = {
+                teacher: document.getElementById('trendSelectTeacher').value,
+                trainee: document.getElementById('trendSelectTrainee').value,
+                schedule: document.getElementById('trendSelectSchedule').value,
+                sessionMin: document.getElementById('sessionMin').value,
+                sessionMax: document.getElementById('sessionMax').value
+            };
+            localStorage.setItem('trendChartFilters', JSON.stringify(filters));
+        };
+
+        ['trendSelectTeacher', 'trendSelectTrainee', 'trendSelectSchedule', 'sessionMin', 'sessionMax'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => { window.saveChartFilters(); renderDashboard(); });
+        });
+
+        // 6. Parsing & Processing
+        function processSummaryCSV(text) {
+            globalSummaryData = [];
+            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
+            const data = results.data;
+            if (!data || data.length < 5) return;
+
+            let headerRowIdx = -1;
+            for (let i = 0; i < Math.min(5, data.length); i++) {
+                let isDateRow = false;
+                for (let j = 0; j < data[i].length; j++) {
+                    if (data[i][j] && data[i][j].match(/\d+\s*[/.-]\s*\d+/)) { isDateRow = true; break; }
+                }
+                if (isDateRow) { headerRowIdx = i; break; }
+            }
+            if (headerRowIdx === -1) return;
+
+            const headerRow = data[headerRowIdx];
+            const dateMap = {};
+            const currentYear = new Date().getFullYear();
+
+            for (let j = 1; j < headerRow.length; j++) {
+                if (headerRow[j]) {
+                    const match = headerRow[j].match(/(\d+)\s*[/.-]\s*(\d+)/);
+                    if (match) {
+                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
+                        d.setHours(0, 0, 0, 0); dateMap[j] = d;
+                    }
+                }
+            }
+
+            const rowMap = {};
+            for (let i = headerRowIdx + 1; i < data.length; i++) {
+                let subCat = (data[i][1] || '').replace(/\s+/g, '');
+                if (!subCat) subCat = (data[i][0] || '').replace(/\s+/g, '');
+                if (subCat) rowMap[subCat] = i;
+            }
+
+            const getVal = (key, j) => {
+                if (rowMap[key] !== undefined && data[rowMap[key]] !== undefined) {
+                    const val = (data[rowMap[key]][j] || '').toString().replace(/,/g, '');
+                    const n = parseInt(val, 10); return isNaN(n) ? 0 : n;
+                }
+                return 0;
+            };
+
+            for (let j = 1; j < headerRow.length; j++) {
+                if (dateMap[j]) {
+                    globalSummaryData.push({
+                        dateObj: dateMap[j],
+                        teacherAttended: getVal('출근한선생님수', j), teacherVacation: getVal('휴가인선생님', j),
+                        traineeAttended: getVal('출석자수', j), traineeAbsent: getVal('결석자수', j),
+                        traineeCancel: getVal('취소자수', j), traineeUnconfirmed: getVal('미확인자수', j),
+                        scheduleCompleted: getVal('완료된수', j), scheduleUnconfirmed: getVal('미확인된수', j),
+                        session15plus: getVal('15회이상', j), session8to14: getVal('8~14회', j), session7minus: getVal('7회이하', j)
+                    });
+                }
+            }
+        }
+
+        function processCSVText(text, teamName) {
+            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
+            const data = results.data;
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(10, data.length); i++) {
+                if (data[i] && data[i].length > 3 && data[i][3] && data[i][3].replace(/\s+/g, '') === "구분") { headerRowIndex = i; break; }
+            }
+            if (headerRowIndex === -1) return;
+
+            const headerRow = data[headerRowIndex];
+            const dateColumns = []; const colDateObjs = {}; const currentYear = new Date().getFullYear();
+            const holidayRow1 = data[headerRowIndex + 1] || [];
+            const holidayRow2 = data[headerRowIndex + 2] || [];
+            for (let j = 4; j < headerRow.length; j++) {
+                if (headerRow[j] && headerRow[j].trim() !== '') {
+                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) || 
+                        (holidayRow2[j] && String(holidayRow2[j]).includes('공휴일'))) {
+                        continue;
+                    }
+                    dateColumns.push({ colIndex: j, dateStr: headerRow[j].trim() });
+                    const match = headerRow[j].trim().match(/(\d+)\s*[\/.]\s*(\d+)/);
+                    if (match) {
+                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
+                        d.setHours(0, 0, 0, 0); colDateObjs[j] = d;
+                    }
+                }
+            }
+
+            let maxDateInSheet = new Date(0);
+            Object.values(colDateObjs).forEach(d => { if (d > maxDateInSheet) maxDateInSheet = d; });
+            const reportRefDate = maxDateInSheet;
+            const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
+
+            const getSessionCount = (targetVal, maxColIndex) => {
+                if (!targetVal || targetVal === "-") return null;
+                let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+                if (names.length === 0) return null;
+
+                let results = [];
+                names.forEach(searchName => {
+                    if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
+
+                    let count = 0;
+                    for (let j = 4; j <= maxColIndex; j++) {
+                        let colDate = colDateObjs[j];
+                        if (!colDate) continue;
+
+                        let foundStatuses = [];
+                        for (let i = headerRowIndex + 1; i < data.length; i++) {
+                            if (!data[i] || data[i].length < 2) continue;
+                            let isNewTBlock = (data[i].length > 1 && data[i][1] && data[i][1].trim() !== '');
+                            const cat = (data[i].length > 3 && data[i][3]) ? data[i][3].replace(/\s+/g, '') : "";
+
+                            if (cat === "대상" || cat === "내용" || cat === "활동" || (!cat && isNewTBlock)) {
+                                let statusRow = null;
+                                if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes("진행여부")) statusRow = data[i + 1];
+                                else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes("진행여부")) statusRow = data[i + 2];
+
+                                const cellStudent = data[i][j] ? data[i][j].trim() : "";
+                                const cellStatus = (statusRow && statusRow[j]) ? statusRow[j].trim() : "";
+                                const cellNames = cellStudent.split(/[/,]/).map(s => s.trim().split('(')[0].trim()).filter(Boolean);
+                                const nameIdx = cellNames.indexOf(searchName);
+
+                                if (nameIdx !== -1) {
+                                    let finalStatus = cellStatus;
+                                    if (cellNames.length > 1 && cellStatus.includes('/')) {
+                                        const rawParts = cellStatus.split(',');
+                                        const firstPart = rawParts[0];
+                                        const slashSegments = firstPart.split('/');
+                                        if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
+                                            const myTag = slashSegments[nameIdx].trim();
+                                            const memoPart = rawParts.slice(1).join(',').trim();
+                                            finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
+                                        }
+                                    }
+                                    foundStatuses.push(finalStatus);
+                                }
+                            }
+                        }
+
+                        let hasSessionOnThisDay = false;
+                        if (foundStatuses.length > 0) {
+                            const nonEmpty = foundStatuses.filter(s => s !== "");
+                            const statusesToEval = nonEmpty.length > 0 ? nonEmpty : foundStatuses;
+                            const hasAbsence = statusesToEval.some(s => { return s.split(',')[0].trim().includes("결석"); });
+                            if (hasAbsence) { hasSessionOnThisDay = false; } else {
+                                const hasNumber = statusesToEval.some(s => { return /^[1-9]\d*/.test(s.split(',')[0].trim()); });
+                                if (hasNumber) { hasSessionOnThisDay = true; } else {
+                                    const isCanceled = statusesToEval.some(s => { return s.split(',')[0].trim().includes("취소") || s.split(',')[0].trim().includes("선생님휴가") || s.split(',')[0].trim().includes("휴가"); });
+                                    if (isCanceled) { hasSessionOnThisDay = false; } else if (colDate < realToday) { hasSessionOnThisDay = true; } else { hasSessionOnThisDay = false; }
+                                }
+                            }
+                        }
+                        if (hasSessionOnThisDay) count++;
+                    }
+                    if (count > 0) results.push({ name: searchName, count: count });
+                });
+                return results.length > 0 ? results : null;
+            };
+
+            let currentGroup = '-'; let currentTeacherName = '이름없음'; let currentTime = '-';
+            for (let i = headerRowIndex + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length < 2) continue;
+                let isNewTeacherBlock = false;
+                if (row[0] && row[0].trim() !== '') currentGroup = row[0].trim();
+                if (row[1] && row[1].trim() !== '') { currentTeacherName = window.autoCorrectText(row[1].trim()); isNewTeacherBlock = true; }
+                if (row[2] && row[2].trim() !== '') currentTime = row[2].trim();
+                const category = (row.length > 3 && row[3]) ? row[3].replace(/\s+/g, '') : '';
+                const isTargetRow = category === "대상" || category === "내용" || category === "활동" || (isNewTeacherBlock && category !== "장소" && !category.includes("진행여부"));
+
+                if (isTargetRow) {
+                    let locationRow = null; let statusRow = null;
+                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].replace(/\s+/g, '') === '장소') locationRow = data[i + 1];
+                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes('진행여부')) statusRow = data[i + 1];
+                    else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes('진행여부')) statusRow = data[i + 2];
+
+                    const lastColIndex = dateColumns.length > 0 ? dateColumns[dateColumns.length - 1].colIndex : (headerRow.length - 1);
+
+                    dateColumns.forEach(dateInfo => {
+                        const colIdx = dateInfo.colIndex;
+                        let statusStr = (statusRow && statusRow.length > colIdx && statusRow[colIdx]) ? statusRow[colIdx].trim() : "";
+                        statusStr = window.autoCorrectText(statusStr);
+
+                        let safeStatusStr = String(statusStr).replace(/\s+/g, '');
+                        let teacherAttended = !safeStatusStr.includes('선생님휴가');
+                        let isAttended = false; let traineeCount = 0;
+                        if (statusStr) {
+                            const safeStatus = statusStr.replace(/\s+/g, '');
+                            if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || safeStatus.includes('휴가'))) {
+                                const match = safeStatus.match(/^(\d+)/);
+                                if (match) { isAttended = true; traineeCount = parseInt(match[1], 10); }
+                            }
+                        }
+
+                        const cellVal = (row.length > colIdx && row[colIdx]) ? row[colIdx].trim() : "";
+                        const targetVal = cellVal === "" ? "-" : window.autoCorrectText(cellVal);
+                        const sessionCounts = getSessionCount(targetVal, lastColIndex);
+
+                        allData.push({
+                            team: teamName, group: currentGroup, date: dateInfo.dateStr, dateObj: colDateObjs[colIdx],
+                            name: currentTeacherName, time: currentTime, target: targetVal,
+                            status: statusStr || "", isAttended, traineeCount, teacherAttended,
+                            location: (locationRow && locationRow.length > colIdx) ? window.autoCorrectText(locationRow[colIdx].trim()) : "-",
+                            sessionCounts: sessionCounts, originalIndex: allData.length
+                        });
+                    });
+                }
+            }
+        }
+
+        function prepareDailyData(targetDateStr) {
+            let dailyData = allData.filter(item => item.date === targetDateStr);
+
+            // ✅ 간담회/소양교육 여부 먼저 확인 (전체 선생님 출근 의무일 판정)
+            const isMandatoryDay = dailyData.some(item => {
+                const targetStr = (item.target || '').replace(/\s+/g, '');
+                const locationStr = (item.location || '').replace(/\s+/g, '');
+                return targetStr.includes('간담회') || locationStr.includes('소양교육');
+            });
+            const teacherVisibilityMap = new Map();
+            dailyData.forEach(item => {
+                if (item.target && item.target !== '-') {
+                    let cleanNames = item.target.split(/[/, \n]+/).map(n => n.trim()).filter(n => n.length > 0 && n !== '-');
+                    item.target = Array.from(new Set(cleanNames)).join('/');
+                    if (item.target === '') item.target = '-';
+                }
+                const tKey = `${item.team}|${item.group}|${item.name}`;
+                if (!teacherVisibilityMap.has(tKey)) teacherVisibilityMap.set(tKey, false);
+                const tText = (item.target || "").trim();
+                const sText = (item.status || "").replace(/\s+/g, '');
+
+                if (isMandatoryDay) {
+                    // 의무 출석일에는 모든 선생님이 보여야 함
+                    teacherVisibilityMap.set(tKey, true);
+                } else {
+                    if (tText !== '-' && tText !== '') teacherVisibilityMap.set(tKey, true);
+                    if (sText.includes('휴가')) teacherVisibilityMap.set(tKey, true);
+                }
+            });
+            dailyData = dailyData.filter(item => teacherVisibilityMap.get(`${item.team}|${item.group}|${item.name}`));
+            let prevAssistantGlobal = new Map();
+            dailyData.forEach(item => {
+                const tKey = `${item.team}|${item.group}|${item.name}`;
+                let tDisp = (item.target || "").trim().replace(/\s+/g, '');
+                if (tDisp.includes('보조강사')) { item.isConsecutiveAssistant = (prevAssistantGlobal.get(tKey) === tDisp); prevAssistantGlobal.set(tKey, tDisp); }
+                else { item.isConsecutiveAssistant = false; prevAssistantGlobal.set(tKey, null); }
+            });
+
+            const teacherStatusMap = new Map();
+            const sessionGroups = { '전체': [], '7회 이하': [], '8~14회': [], '15회 이상': [] };
+            const validScheduleGroups = { '전체': [] };
+            const sessionMap = new Map();
+
+            dailyData.forEach(item => {
+                let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                let isPartial = false;
+                if (rawStatus) {
+                    const checkStr = rawStatus.replace(/\s+/g, '');
+                    const match = rawStatus.match(/^(\d+)/);
+                    let extC = match ? parseInt(match[1], 10) : 0;
+                    if ((checkStr.includes('결석') || checkStr.includes('취소')) && extC >= 1) isPartial = true;
+                }
+                item.isPartial = isPartial;
+                const cleanTeacher = item.name.replace(/\s+/g, '');
+                if (cleanTeacher !== '천은선서승희') {
+                    if (!teacherStatusMap.has(item.name)) {
+                        // 의무 출석일이면 기본 상태를 '출근_확정'으로 설정 (수업 없어도 출근)
+                        teacherStatusMap.set(item.name, { item: item, status: isMandatoryDay ? '출근_확정' : '출근' });
+                    }
+                    let tData = teacherStatusMap.get(item.name);
+                    if (rawStatus) {
+                        const checkStr = rawStatus.replace(/\s+/g, '');
+                        if (checkStr.includes('선생님휴가')) {
+                            tData.status = '휴가'; // 휴가는 가장 높은 우선순위
+                        } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
+                            tData.status = '출근_확정';
+                        }
+                    }
+                }
+
+                const targetText = (item.target || "").trim();
+                const isEmptyTarget = (!targetText || targetText === '-');
+                let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
+                let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+                if (isEmptyTarget) stat_sCount = 0;
+                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sUnconfirmed = 0;
+                let stat_pStr = rawStatus ? rawStatus.trim() : "";
+                let cleanTargetStr = targetText.replace(/\s+/g, '');
+                let cleanLocationStr = (item.location || '').replace(/\s+/g, '');
+                let isExcludedTextOnly = ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴', '선생님휴가', '휴가'].some(kw => stat_pStr.replace(/\s+/g, '').includes(kw));
+                if (cleanTargetStr.includes('자체학습') || cleanTargetStr.includes('대상자발굴')) isExcludedTextOnly = true;
+                if (cleanTargetStr.includes('간담회') || cleanLocationStr.includes('소양교육')) isExcludedTextOnly = true;
+
+                if (stat_sCount > 0) {
+                    if (stat_pStr === "" && !isExcludedTextOnly) { 
+                        stat_sUnconfirmed = stat_sCount; 
+                    } else if (isExcludedTextOnly) { 
+                        stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0; 
+                    } else {
+                        // 슬래시를 포함한 경우 분리하여 각각 판단 (요청사항 반영)
+                        if (stat_pStr.includes('/')) {
+                            stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
+                            const parts = stat_pStr.split('/').map(p => p.trim());
+                            parts.forEach(part => {
+                                if (part.includes("결석")) stat_sAbsent++;
+                                else if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
+                                else if (/\d/.test(part)) stat_sAttend++;
+                                else if (part !== "") stat_sUnconfirmed++;
+                            });
+                            // 합산된 수가 대상자 수보다 적을 경우, 나머지를 미확인으로 간주
+                            let totalParsed = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sUnconfirmed;
+                            if (totalParsed < stat_sCount) {
+                                stat_sUnconfirmed += (stat_sCount - totalParsed);
+                            }
+                        } else {
+                            const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
+                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length; let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+                            if (stat_pStr.startsWith("취소")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                            } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
+                                stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
+                            } else if (stat_pStr.includes("결석")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
+                            } else if (stat_pStr.includes("취소")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                            } else {
+                                if (match) stat_sAttend = firstNum; else stat_sAttend = stat_sCount;
+                            }
+                        }
+                    }
+                }
+
+                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statUnconfirmed = stat_sUnconfirmed;
+                validScheduleGroups['전체'].push(item);
+
+                let validScheduleNamesArray = [];
+                if (!isEmptyTarget) {
+                    let cleanTarget = targetText.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const allNames = cleanTarget.split(/[/, \n]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    const namesWithoutPrep = allNames.filter(name => name !== '학습' && name !== '대상자' && name !== '대상자없음');
+                    validScheduleNamesArray = Array.from(new Set(namesWithoutPrep));
+                    if (validScheduleNamesArray.length === 0) validScheduleNamesArray = ['-'];
+                } else validScheduleNamesArray = ['-'];
+
+                validScheduleNamesArray.forEach(name => {
+                    let cleanStudentName = name.replace(/\s+/g, '');
+                    if (cleanStudentName.includes('보조강사')) return;
+                    const traineeItem = { ...item, splitName: name };
+                    traineeItem.isConsecutiveAssistant = false;
+
+                    if (!isExcludedCondition(traineeItem, name)) {
+                        let sName = name ? name.trim() : '';
+                        const excludeKeywords = ['보조강사', '개발중', '자체학습', '오전수업', '컴1/보조', '컴기초1반', '컴활용/보조'];
+                        let isExcludedSession = !sName || sName === '-';
+                        if (!isExcludedSession) { for (let kw of excludeKeywords) { if (sName.includes(kw)) { isExcludedSession = true; break; } } }
+                        if (!isExcludedSession) {
+                            let matchedObj = traineeItem.sessionCounts ? traineeItem.sessionCounts.find(sc => sName.includes(sc.name) || sc.name.includes(sName)) : null;
+                            let currentCount = matchedObj ? matchedObj.count : 0;
+                            traineeItem.sessionCount = currentCount;
+                            if (!sessionMap.has(sName)) sessionMap.set(sName, traineeItem);
+                            else {
+                                let existingItem = sessionMap.get(sName);
+                                let existingCount = parseInt(existingItem.sessionCount, 10);
+                                if (isNaN(existingCount)) existingCount = 0;
+                                if (currentCount > existingCount) sessionMap.set(sName, traineeItem);
+                            }
+                        }
+                    }
+                });
+            });
+
+            sessionMap.forEach((item, sName) => {
+                let count = parseInt(item.sessionCount, 10);
+                let sessionGroupName = '';
+                if (isNaN(count) || !item.sessionCount) sessionGroupName = '7회 이하';
+                else if (count <= 7) sessionGroupName = '7회 이하';
+                else if (count <= 14) sessionGroupName = '8~14회';
+                else sessionGroupName = '15회 이상';
+                item.sessionGroupName = sessionGroupName;
+                item.calcCount = 1;
+                sessionGroups[sessionGroupName].push(item);
+                sessionGroups['전체'].push(item);
+            });
+
+            const teacherGroups = { '전체': [], '출근': [], '휴가': [] };
+            teacherStatusMap.forEach((tData) => {
+                const finalStatus = tData.status === '휴가' ? '휴가' : '출근';
+                tData.item.teacherFinalStatus = finalStatus;
+                teacherGroups['전체'].push(tData.item);
+                teacherGroups[finalStatus].push(tData.item);
+            });
+
+            const filterScheduleForGraph = (item) => {
+                if (isExcludedCondition(item, item.target)) return false;
+                const t = (item.target || '').trim();
+                if (t === '-' || t === '') return false;
+                return true;
+            };
+
+            const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
+            let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalUnconfirmed = 0;
+            graphSchedulesAll.forEach(item => {
+                totalAttend += item.statAttend || 0;
+                totalAbsent += item.statAbsent || 0;
+                totalCancel += item.statCancel || 0;
+                totalUnconfirmed += item.statUnconfirmed || 0;
+            });
+            let totalTrainees = totalAttend + totalAbsent + totalUnconfirmed;
+            let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0).length;
+            let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
+
+            return {
+                dailyData, teacherGroups, validScheduleGroups, sessionGroups,
+                totalTrainees, totalAttend, totalAbsent, totalCancel, totalUnconfirmed,
+                graphSchedulesAll, schedCompletedCount, schedUnconfCount, filterScheduleForGraph
+            };
+        }
+
+        // 7. Load & Sync
+        async function calculateAndSendStatistics() {
+            if (!window.APPS_SCRIPT_URL || window.APPS_SCRIPT_URL.includes("여기에_스크립트_URL을_붙여넣으세요")) return;
+            const uniqueDates = new Set();
+            const payloadDates = [];
+            allData.forEach(item => {
+                if (item.date && !uniqueDates.has(item.date)) { uniqueDates.add(item.date); payloadDates.push(item.date); }
+            });
+            payloadDates.sort((a, b) => {
+                const matchA = a.match(/(\d+)[/.](\d+)/); const matchB = b.match(/(\d+)[/.](\d+)/);
+                if (!matchA || !matchB) return 0;
+                const mA = parseInt(matchA[1], 10); const dA = parseInt(matchA[2], 10);
+                const mB = parseInt(matchB[1], 10); const dB = parseInt(matchB[2], 10);
+                if (mA !== mB) return mA - mB; return dA - dB;
+            });
+            if (payloadDates.length === 0) return;
+
+            const statsPayload = payloadDates.map(dateStr => {
+                const dStats = prepareDailyData(dateStr);
+                return {
+                    date: dateStr,
+                    stats: [
+                        dStats.teacherGroups['출근'] ? dStats.teacherGroups['출근'].length : 0,
+                        dStats.teacherGroups['휴가'] ? dStats.teacherGroups['휴가'].length : 0,
+                        dStats.totalAttend || 0, dStats.totalAbsent || 0, dStats.totalCancel || 0, dStats.totalUnconfirmed || 0,
+                        dStats.schedCompletedCount || 0, dStats.schedUnconfCount || 0,
+                        dStats.sessionGroups['15회 이상'] ? dStats.sessionGroups['15회 이상'].length : 0,
+                        dStats.sessionGroups['8~14회'] ? dStats.sessionGroups['8~14회'].length : 0,
+                        dStats.sessionGroups['7회 이하'] ? dStats.sessionGroups['7회 이하'].length : 0
+                    ]
+                };
+            });
+
+            try {
+                const response = await fetch(window.APPS_SCRIPT_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'overwrite_summary', data: statsPayload })
+                });
+                const res = await response.json();
+                if (res.status === 'success') console.log(`✅ 구글 시트 요약 통계 덮어쓰기 완료`);
+            } catch (e) { console.error('⚠️ 요약 통계 전송 응답 에러:', e); }
+        }
+
+        async function loadDataFromGoogleSheets(urls, isSilent = false) {
+            if (isFetching) return;
+            isFetching = true;
+
+            const syncPopup = document.getElementById('syncPopup');
+            const globalLoader = document.getElementById('globalLoader');
+            const syncIndicator = document.getElementById('syncIndicator');
+            const loaderText = document.querySelector('#globalLoader .text-2xl');
+
+            if (isSilent) {
+                if (syncIndicator) syncIndicator.style.opacity = "1";
+                if (syncPopup) { syncPopup.classList.remove('hidden'); syncPopup.classList.add('flex'); }
+            } else {
+                if (globalLoader) {
+                    if (loaderText) loaderText.textContent = "상세 데이터를 읽고 있습니다...";
+                    globalLoader.classList.remove('hidden'); globalLoader.classList.add('flex');
+                }
+            }
+
+            allData = []; globalSummaryData = []; const teamNames = ["1팀", "2팀", "3팀"];
+            const parsedResults = new Array(urls.length);
+
+            const fetchPromises = urls.map(async (url, i) => {
+                const csvUrl = getCsvUrl(url);
+                if (!csvUrl) return;
+                try {
+                    const res = await fetch(csvUrl);
+                    if (res.ok) parsedResults[i] = await res.text();
+                } catch (e) { window.showToast(`${teamNames[i]} 데이터를 불러올 수 없습니다.`, true); }
+            });
+
+            await Promise.all(fetchPromises);
+            let hasData = false;
+            parsedResults.forEach((text, i) => { if (text) { processCSVText(text, teamNames[i]); hasData = true; } });
+
+            if (hasData) {
+                if (!isSilent && loaderText) loaderText.textContent = "요약 데이터를 생성하여 구글 시트에 기록 중입니다...";
+                await calculateAndSendStatistics();
+                if (!isSilent && loaderText) loaderText.textContent = "기록된 요약 데이터를 동기화 중입니다...";
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                const summaryUrlInput = document.getElementById('summaryUrl').value;
+                const summaryCsvUrl = getCsvUrl(summaryUrlInput);
+                if (summaryCsvUrl) {
+                    try {
+                        const summaryRes = await fetch(summaryCsvUrl + `&timestamp=${Date.now()}`);
+                        if (summaryRes.ok) processSummaryCSV(await summaryRes.text());
+                    } catch (e) { }
+                }
+            }
+
+            if (!isDatesInitialized && hasData) { initializeDates(); isDatesInitialized = true; }
+
+            if (allData.length === 0 && globalSummaryData.length === 0) {
+                setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden');
+                document.getElementById('periodNavigation').classList.add('hidden');
+            } else {
+                setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
+                document.getElementById('periodNavigation').classList.remove('hidden');
+                renderDashboard();
+            }
+
+            isFetching = false;
+            if (isSilent) {
+                setTimeout(() => {
+                    if (syncIndicator) syncIndicator.style.opacity = "0";
+                    if (syncPopup) { syncPopup.classList.add('hidden'); syncPopup.classList.remove('flex'); }
+                }, 500);
+            } else {
+                if (globalLoader) { globalLoader.classList.add('hidden'); globalLoader.classList.remove('flex'); }
+            }
+        }
+
+        function startAutoSync() {
+            if (autoSyncInterval) clearInterval(autoSyncInterval);
+            autoSyncInterval = setInterval(() => {
+                let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
+                if (savedUrls.some(url => url.trim() !== '')) loadDataFromGoogleSheets(savedUrls, true);
+            }, 30 * 60 * 1000);
+        }
+
+        // 8. Render Helpers
+        async function generateWordCloud(data) {
+            const container = document.getElementById('wordCloudContainer');
+            let allMemos = ""; const dynamicStopwords = new Set();
+
+            data.forEach(item => {
+                if (isExcludedCondition(item, item.target)) return;
+                if (item.name && item.name !== '-' && item.name !== '이름없음') {
+                    let tName = item.name.replace(/\s+/g, '');
+                    if (/^[가-힣]{2,4}$/.test(tName)) { dynamicStopwords.add(tName); if (tName.length >= 3) dynamicStopwords.add(tName.substring(1)); }
+                }
+                if (item.target && item.target !== '-') {
+                    const names = item.target.replace(/대상자\s*없음|대상자\s*발굴|보조강사|[0-9]+명/g, '').split(/[/, \n()]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    names.forEach(n => {
+                        let sName = n.replace(/\s+/g, '');
+                        if (/^[가-힣]{2,4}$/.test(sName)) { dynamicStopwords.add(sName); if (sName.length >= 3) dynamicStopwords.add(sName.substring(1)); }
+                    });
+                }
+                if (!item.status || item.status === '-' || !item.target || item.target === '-') return;
+                let memo = item.status.replace(/선생님\s*휴가|결석|취소/g, '');
+                memo = memo.replace(/(^|[^0-9])\d+\s*명?(?=[^0-9]|$)/g, '$1').replace(/^[,\s()]+|[,\s()]+$/g, '').trim();
+                if (memo && memo !== '-') allMemos += memo + "\n";
+            });
+
+            if (!allMemos.trim()) {
+                container.innerHTML = '<div class="text-slate-400 text-center w-full text-[clamp(16px,1.5vw,24px)]">해당 기간의 학습 관련 교육 내역이 없습니다.</div>'; return;
+            }
+
+            const wordCounts = {};
+            const stopwords = new Set(['교육', '진행', '수업', '선생님', '어르신', '대상자', '오늘', '내일', '시간', '정도', '조금', '많이', '질문', '답변', '설명', '연습', '복습', '기능', '사용', '방법', '이용', '배움', '학습', '복지관', '경로당', '휴가', '결석', '취소', '완료', '미확인', '이해', '어려워', '쉬워', '요청', '도움', '다시', '한번', '같이', '직접', '스스로', '혼자', '했습니다', '합니다', '입니다', '어르신들', '강사', '보조강사', '어려워하심', '좋아하심', '관심', '필요', '기본', '안내', '확인', '설치', '가입', '변경', '삭제', '추가', '검색', '화면', '설정', '관련', '위해', '통해', '대해', '대하여', '관하여', '위하여', '통하여', '대해서', '관련해서', '위해서', '통해서', '대한', '관한', '위한', '통한', '있는', '없는', '하는', '되는', '같은', '있음', '없음', '같음', '하심', '주심', '드림', '알려드림', '도와드림', '가르쳐드림', '해드림', '해줌', '진행함', '설명함', '안내함', '수업함', '교육함', '학습함', '복습함', '연습함', '지원함', '마무리', '예정', '준비', '대기', '계획', '진행중', '수업중', '교육중', '방문', '이동', '센터', '그리고', '그래서', '그러나', '그런데', '하지만', '또는', '또한', '매우', '아주', '너무', '정말', '진짜', '상당히', '특히', '자주', '가장', '제일', '모두', '전부', '전체', '다들', '다같이', '서로', '함께', '혼자서', '마음', '생각', '느낌', '사실', '경우', '부분', '사항', '내용', '모습', '모양', '다소', '약간', '거의', '대부분', '일단', '우선', '먼저', '지금', '현재', '나중', '이후', '이전', '어제', '모레', '이번', '저번', '다음', '계속', '항상', '가끔', '때때로', '아직', '벌써', '이미', '빨리', '일찍', '늦게', '천천히', '갑자기', '어쩌다', '혹시', '만약', '아마', '물론', '당연히', '역시', '참', '엄청', '몹시', '잘', '못', '안', '아니', '그냥', '바로', '또', '더', '덜', '좀', '다', '일부', '반', '절반', '하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열', '알려', '알려드림', '가르쳐', '알려줌', '알려주고', '배웠습니다', '배움', '배웠음', '배우고', '배우기', '배우심', '배우셨음', '배우셨습니다', '배우셨고', '복습했습니다', '복습하심', '연습하심', '질문하심', '물어보심', '알아봄', '알아보기', '해봄', '해보기']);
+            const synonyms = { '제미나': '제미나이', '와이파': '와이파이', '삼성페': '삼성페이', '네이버페': '네이버페이', '카카오페': '카카오페이', '토스페': '토스페이', '애플페': '애플페이', '네이버지': '네이버지도', '카카오지': '카카오지도', '구글지': '구글지도', '카톡': '카카오톡', '까톡': '카카오톡', '카카오': '카카오톡', '오픈채팅': '카카오톡', '유투브': '유튜브', '유트브': '유튜브', '너튜브': '유튜브', 'youtube': '유튜브', '유투브앱': '유튜브', '스마트폰': '스마트폰', '스마터폰': '스마트폰', '핸드폰': '스마트폰', '휴대폰': '스마트폰', '폰': '스마트폰', '어플': '앱', '애플리케이션': '앱', '어플리케이션': '앱', '와이파이': '와이파이', 'wifi': '와이파이', '키오스크': '키오스크', 'kiosk': '키오스크', '큐오스크': '키오스크', '무인기': '키오스크', '쳇gpt': '챗GPT', '챗지피티': '챗GPT', '채지피티': '챗GPT', '사진촬영': '사진', '동영상촬영': '동영상', '보이스피싱': '스미싱' };
+            const preserveKeywords = ['페이', '지도', '따릉이', '추가', '가입', '메시지', '페이지', '이미지', '와이파이', '데이터', '스토어', '스마트폰', '휴대폰', '아이폰', '어플', '앱', '키오스크', '유튜브', '카카오톡', '카톡', '네이버', '다음', '구글', '택시', '버스', '지하철', '기차', '예매', '예약', '결제', '송금', '이체', '인증', '사진', '영상', '카메라', '갤러리', '연락처', '전화', '문자', '검색', '인터넷', '쇼핑', '주문', '배달', '길찾기', '내비게이션', '설정', '계정', '비밀번호', '로그인', '로그아웃', '글쓰기', '만들기', '보내기', '공유', '저장', '삭제', '변경', '확인', '취소', '홈', '소리', '진동', '무음', '알림', '블루투스', '배터리', '충전', '보이스피싱', '스미싱', '사기', '예방', '차단', '신고', '보안', '어린이', '돋보기', '나이', '차이', '종이', '구이', '놀이', '먹이', '업데이트', '설치', '다운로드', '드라이브', '클라우드', '회원가입', '인증서', '백신', '바이러스', '채팅', '오픈채팅', '프로필', '배경화면', '벨소리', '키보드', '타자', '음성', '마이크', '이어폰', '스피커', '계좌', '은행', '통장', '카드', '신용카드', '체크카드', '교통카드', '환승', '길안내', '택시호출', '기차표', '항공권', '예매하기', '결제하기', '송금하기', '인증하기', '앱설치', '어플설치', '앱삭제', '어플삭제', '업그레이드', '초기화', '재부팅', '전원', '밝기', '크기', '폰트'];
+
+            allMemos.split(/[\s,./\n()~?!'":;+\[\]{}<>-]+/).forEach(word => {
+                let cleanWord = word.replace(/(어르신|님|강사님|선생님|보조강사|어머니|아버지)$/, '');
+                let beforeParticleStrip = cleanWord;
+                cleanWord = cleanWord.replace(/(은|는|이|가|을|를|에|에게|에서|로|으로|과|와|도|입니다|합니다|습니다|요|께서|까지|부터|마저|조차|만|뿐|의|들|고|하고|하게|하시|하신|하셨|하여|해|해서|해요|며|면|지만|에서부터|이라는|라는|이라고|으로서|으로서의)$/, '');
+                for (let keyword of preserveKeywords) { if (beforeParticleStrip.includes(keyword) && !cleanWord.includes(keyword)) { cleanWord = beforeParticleStrip; break; } }
+                cleanWord = cleanWord.replace(/^[^a-zA-Z가-힣0-9]+|[^a-zA-Z가-힣0-9]+$/g, '');
+                if (word.includes('어플') || cleanWord === '애플리케이션' || cleanWord === '어플리케이션') cleanWord = '앱';
+
+                if (cleanWord.length > 2) {
+                    let tempClean = cleanWord.replace(/(하기|하는법|하는방법|방법|사용법|활용법|보는법|드림|주심|하심|설명|안내|연습|복습|진행|학습)$/, '');
+                    let isProtected = false;
+                    for (let keyword of preserveKeywords) { if (cleanWord.includes(keyword) && !tempClean.includes(keyword)) { isProtected = true; break; } }
+                    if (!isProtected) cleanWord = tempClean;
+                }
+                if (cleanWord.length > 1) {
+                    let tempClean = cleanWord.replace(/(함|됨)$/, '');
+                    let isProtected = false;
+                    for (let keyword of preserveKeywords) { if (cleanWord.includes(keyword) && !tempClean.includes(keyword)) { isProtected = true; break; } }
+                    if (!isProtected) cleanWord = tempClean;
+                }
+                if (cleanWord.length >= 2 && isNaN(cleanWord) && !/^\d+(명|시|분|회|회차|층|월|일|년|개|번|원)$/.test(cleanWord)) {
+                    cleanWord = cleanWord.toLowerCase();
+                    if (synonyms[cleanWord]) cleanWord = synonyms[cleanWord];
+                    const isVerbEnding = /(하다|했다|하셨다|주셨다|해주다|해드림|알려줌|가르쳐)$/.test(cleanWord);
+                    if (!stopwords.has(cleanWord) && !dynamicStopwords.has(cleanWord) && !isVerbEnding) { wordCounts[cleanWord] = (wordCounts[cleanWord] || 0) + 1; }
+                }
+            });
+
+            const sortedWords = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]).slice(0, 35);
+            if (sortedWords.length === 0) { container.innerHTML = '<div class="text-slate-400 text-center w-full text-[clamp(16px,1.5vw,24px)]">분석된 핵심 키워드가 없습니다.</div>'; return; }
+            const maxCount = sortedWords[0][1];
+            const colors = ['bg-blue-100 text-blue-700 border-blue-200', 'bg-green-100 text-green-700 border-green-200', 'bg-purple-100 text-purple-700 border-purple-200', 'bg-orange-100 text-orange-700 border-orange-200', 'bg-indigo-100 text-indigo-700 border-indigo-200', 'bg-teal-100 text-teal-700 border-teal-200'];
+
+            container.innerHTML = sortedWords.map(([word, count], idx) => {
+                const fontSize = Math.max(12, Math.min(32, (count / maxCount) * 32));
+                const fontSize2xl = Math.round(fontSize * 1.8);
+                const vwVal = (fontSize2xl / 15.36).toFixed(2);
+                const colorClass = colors[idx % colors.length];
+                return `<span class="word-chip px-[clamp(12px,1.5vw,24px)] py-[clamp(4px,0.6vw,12px)] rounded-full border ${colorClass} font-bold shadow-sm" style="font-size: clamp(${fontSize}px, ${vwVal}vw, ${fontSize2xl}px);">${word} <span class="text-[0.6em] opacity-40 ml-1">${count}</span></span>`;
+            }).join('');
+        }
+
+        function createGaugeHTML(rateLabel, total, unit, sections, cardTypeId, mainIndex = 0) {
+            if (total === 0 && sections.every(sec => sec.count === 0)) return '<div class="w-full text-center text-slate-500 py-4 mt-4 border-t border-slate-600/50 font-medium text-[clamp(14px,1.2vw,20px)]">데이터 없음</div>';
+            let paths = ''; let currentOffset = 0;
+            sections.forEach(sec => {
+                if (sec.count === 0 || sec.hideFromGauge) return;
+                const percentage = total > 0 ? (sec.count / total) * 100 : 0;
+                paths += `<path d="M 10 45 A 35 35 0 0 1 90 45" fill="none" stroke="${sec.color}" stroke-width="14" stroke-dasharray="${percentage} 100" stroke-dashoffset="-${currentOffset}" pathLength="100" class="gauge-path" stroke-linecap="butt" />`;
+                currentOffset += percentage;
+            });
+            const mainPercent = total > 0 && sections[mainIndex] && sections[mainIndex].count > 0 ? Math.round((sections[mainIndex].count / total) * 100) : 0;
+            let legendHtml = '';
+            sections.forEach(sec => {
+                legendHtml += `<div class="legend-btn text-center flex flex-col items-center rounded-lg p-1 sm:p-1.5 shrink-0" data-type="${cardTypeId}" data-filter="${sec.label}"><div class="flex items-center gap-[clamp(2px,0.5vw,8px)] text-slate-400 font-medium text-[clamp(12px,1.2vw,16px)] whitespace-nowrap"><span class="rounded-full w-[clamp(6px,1vw,12px)] h-[clamp(6px,1vw,12px)] shrink-0" style="background-color: ${sec.color}"></span>${sec.label}</div><span class="font-bold text-slate-200 mt-0.5 text-[clamp(15px,1.6vw,22px)] whitespace-nowrap">${sec.count}<span class="font-normal ml-0.5 text-slate-500 text-[clamp(10px,1vw,14px)]">${unit}</span></span></div>`;
+            });
+
+            return `<div class="w-full flex flex-col items-center border-t border-slate-600/50 pt-4 2xl:pt-6 mt-4">
+                <div class="relative w-full max-w-[180px] 2xl:max-w-[240px] flex justify-center items-center">
+                    <svg viewBox="0 -10 100 65" class="w-full h-auto overflow-visible"><path d="M 10 45 A 35 35 0 0 1 90 45" fill="none" stroke="#334155" stroke-width="14" stroke-linecap="butt" />${paths}</svg>
+                    <div class="gauge-center absolute inset-x-0 bottom-3 2xl:bottom-5 flex flex-col items-center justify-end cursor-default" onclick="event.stopPropagation()">
+                        <span class="font-extrabold text-white leading-none tracking-tight text-[clamp(20px,2.5vw,36px)]">${mainPercent}%</span>
+                        <span class="text-slate-400 font-bold mt-1 text-[clamp(9px,1vw,14px)]">${rateLabel}</span>
+                    </div>
+                </div>
+                <div class="w-full flex flex-nowrap justify-center gap-[clamp(4px,1vw,16px)] mt-2 2xl:mt-4 px-1 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <div class="legend-btn text-center flex flex-col items-center border-r border-slate-600/50 pr-[clamp(4px,1vw,16px)] rounded-lg p-1 sm:p-1.5 shrink-0" data-type="${cardTypeId}" data-filter="전체">
+                        <span class="text-slate-400 font-medium text-[clamp(12px,1.2vw,16px)] whitespace-nowrap">전체</span>
+                        <span class="font-bold text-slate-200 mt-0.5 text-[clamp(15px,1.6vw,22px)] whitespace-nowrap">${total}<span class="font-normal ml-0.5 text-slate-500 text-[clamp(10px,1vw,14px)]">${unit}</span></span>
+                    </div>${legendHtml}
+                </div>
+            </div>`;
+        }
+
+        function renderTrendCharts(labels, dataTeacher, dataTrainee, dataSchedule, dataSession) {
+            if (typeof Chart !== 'undefined') { Chart.defaults.color = '#ffffff'; Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)'; Chart.defaults.font.family = "'Pretendard', sans-serif"; }
+            const createChart = (chartInstance, ctxId, label, data, color) => {
+                if (chartInstance) chartInstance.destroy();
+                const canvas = document.getElementById(ctxId);
+                if (!canvas) return null;
+                return new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: [{ label: label, data: data, borderColor: color, backgroundColor: color + '33', borderWidth: 3, pointBackgroundColor: '#ffffff', pointBorderColor: color, pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (context) { return context.raw + (ctxId === 'trendChartSchedule' ? '건' : '명'); } } } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 30, autoSkip: true, maxTicksLimit: 10, font: { size: 11 } } } } }
+                });
+            };
+            chartTeacher = createChart(chartTeacher, 'trendChartTeacher', '출근 선생님 수', dataTeacher, '#3b82f6');
+            chartTrainee = createChart(chartTrainee, 'trendChartTrainee', '출석 대상자 수', dataTrainee, '#22c55e');
+            chartSchedule = createChart(chartSchedule, 'trendChartSchedule', '완료 일정 수', dataSchedule, '#a855f7');
+            chartSession = createChart(chartSession, 'trendChartSession', '전체 회차 인원 수', dataSession, '#f97316');
+
+            // 그래프 클릭 이벤트 추가
+            if (chartTeacher) {
+                document.getElementById('trendChartTeacher').style.cursor = 'pointer';
+                document.getElementById('trendChartTeacher').onclick = () => {
+                    const startVal = document.getElementById('startDate').value;
+                    const d = startVal ? new Date(startVal) : new Date();
+                    renderCalendarModal(d.getFullYear(), d.getMonth(), 'teacher', false);
+                };
+            }
+            if (chartTrainee) {
+                document.getElementById('trendChartTrainee').style.cursor = 'pointer';
+                document.getElementById('trendChartTrainee').onclick = () => {
+                    const startVal = document.getElementById('startDate').value;
+                    const d = startVal ? new Date(startVal) : new Date();
+                    renderCalendarModal(d.getFullYear(), d.getMonth(), 'trainee', false);
+                };
+            }
+            if (chartSchedule) {
+                document.getElementById('trendChartSchedule').style.cursor = 'pointer';
+                document.getElementById('trendChartSchedule').onclick = () => {
+                    const startVal = document.getElementById('startDate').value;
+                    const d = startVal ? new Date(startVal) : new Date();
+                    renderCalendarModal(d.getFullYear(), d.getMonth(), 'schedule', false);
+                };
+            }
+            if (chartSession) {
+                document.getElementById('trendChartSession').style.cursor = 'pointer';
+                document.getElementById('trendChartSession').onclick = () => {
+                    const startVal = document.getElementById('startDate').value;
+                    const d = startVal ? new Date(startVal) : new Date();
+                    renderCalendarModal(d.getFullYear(), d.getMonth(), 'session', false);
+                };
+            }
+        }
+
+        // 9. Main Render Logic
+        function renderDashboard() {
+            const startVal = document.getElementById('startDate').value;
+            const endVal = document.getElementById('endDate').value;
+            if (!startVal || !endVal) return;
+
+            const startD = new Date(startVal); startD.setHours(0, 0, 0, 0);
+            const endD = new Date(endVal); endD.setHours(23, 59, 59, 999);
+
+            let periodData = allData.filter(item => item.dateObj && item.dateObj >= startD && item.dateObj <= endD);
+
+            // ✅ 의무 출근일 목록 생성
+            const mandatoryDates = new Set();
+            periodData.forEach(item => {
+                const targetStr = (item.target || '').replace(/\s+/g, '');
+                const locationStr = (item.location || '').replace(/\s+/g, '');
+                if (targetStr.includes('간담회') || locationStr.includes('소양교육')) {
+                    mandatoryDates.add(item.date);
+                }
+            });
+
+            const teacherVisibilityMap = new Map();
+            periodData.forEach(item => {
+                const tKey = `${item.date}|${item.team}|${item.group}|${item.name}`;
+                if (!teacherVisibilityMap.has(tKey)) teacherVisibilityMap.set(tKey, false);
+                const tText = (item.target || "").trim(); const sText = (item.status || "").replace(/\s+/g, '');
+                
+                if (mandatoryDates.has(item.date)) {
+                    // 의무 출석일에는 모든 선생님이 보여야 함
+                    teacherVisibilityMap.set(tKey, true);
+                } else {
+                    if (tText !== '-' && tText !== '') teacherVisibilityMap.set(tKey, true);
+                    if (sText.includes('휴가')) teacherVisibilityMap.set(tKey, true);
+                }
+            });
+            periodData = periodData.filter(item => teacherVisibilityMap.get(`${item.date}|${item.team}|${item.group}|${item.name}`));
+
+            let prevAssistantGlobal = new Map();
+            periodData.forEach(item => {
+                const tKey = `${item.date}|${item.team}|${item.group}|${item.name}`;
+                let tDisp = (item.target || "").trim().replace(/\s+/g, '');
+                if (tDisp.includes('보조강사')) { item.isConsecutiveAssistant = (prevAssistantGlobal.get(tKey) === tDisp); prevAssistantGlobal.set(tKey, tDisp); }
+                else { item.isConsecutiveAssistant = false; prevAssistantGlobal.set(tKey, null); }
+            });
+
+            generateWordCloud(periodData);
+
+            const teacherStatusMap = new Map();
+            const groupTargetSet = new Set();
+            const scheduleSet = new Set();
+            const traineeGroups = { '전체': [], '출석': [], '미확인': [], '결석': [], '취소': [] };
+            const validScheduleGroups = { '전체': [] };
+            const sessionGroups = { '전체': [], '7회 이하': [], '8~14회': [], '15회 이상': [] };
+            const sessionMap = new Map();
+
+            periodData.forEach(item => {
+                let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                let isPartial = false;
+                if (rawStatus) {
+                    const checkStr = rawStatus.replace(/\s+/g, ''); const match = rawStatus.match(/^(\d+)/);
+                    if ((checkStr.includes('결석') || checkStr.includes('취소')) && (match ? parseInt(match[1], 10) : 0) >= 1) isPartial = true;
+                }
+                item.isPartial = isPartial;
+
+                const cleanTeacher = item.name.replace(/\s+/g, '');
+                if (cleanTeacher !== '천은선서승희') {
+                    const teacherKey = `${item.date}|${item.name}`;
+                    if (!teacherStatusMap.has(teacherKey)) {
+                        // 의무 출석일이면 기본 상태를 '출근_확정'으로 설정
+                        teacherStatusMap.set(teacherKey, { item: item, status: mandatoryDates.has(item.date) ? '출근_확정' : '출근' });
+                    }
+                    let tData = teacherStatusMap.get(teacherKey);
+                    if (rawStatus) {
+                        const checkStr = rawStatus.replace(/\s+/g, '');
+                        if (checkStr.includes('선생님휴가')) {
+                            tData.status = '휴가'; // 휴가는 가장 높은 우선순위
+                        } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
+                            tData.status = '출근_확정';
+                        }
+                    }
+                }
+
+                const targetText = (item.target || "").trim();
+                const isEmptyTarget = (!targetText || targetText === '-');
+                let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
+                let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+                if (isEmptyTarget) stat_sCount = 0;
+                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sUnconfirmed = 0;
+                let stat_pStr = rawStatus ? rawStatus.trim() : "";
+
+                if (stat_sCount > 0) {
+                    if (stat_pStr === "") { 
+                        stat_sUnconfirmed = stat_sCount; 
+                    } else {
+                        // 슬래시를 포함한 경우 분리하여 각각 판단 (요청사항 반영)
+                        if (stat_pStr.includes('/')) {
+                            stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
+                            const parts = stat_pStr.split('/').map(p => p.trim());
+                            parts.forEach(part => {
+                                if (part.includes("결석")) stat_sAbsent++;
+                                else if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
+                                else if (/\d/.test(part)) stat_sAttend++;
+                                else if (part !== "") stat_sUnconfirmed++;
+                            });
+                            // 합산된 수가 대상자 수보다 적을 경우, 나머지를 미확인으로 간주
+                            let totalParsed = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sUnconfirmed;
+                            if (totalParsed < stat_sCount) {
+                                stat_sUnconfirmed += (stat_sCount - totalParsed);
+                            }
+                        } else {
+                            const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
+                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length; let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+                            if (stat_pStr.startsWith("취소")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                            } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
+                                stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
+                            } else if (stat_pStr.includes("결석")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
+                            } else if (stat_pStr.includes("취소")) {
+                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                            } else {
+                                if (match) stat_sAttend = firstNum; else stat_sAttend = stat_sCount;
+                            }
+                        }
+                    }
+                }
+                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statUnconfirmed = stat_sUnconfirmed;
+
+                let validTraineeNamesArray = [];
+                if (!isEmptyTarget) {
+                    const allNames = targetText.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴').split(/[/, \n]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    const namesWithoutPrep = allNames.filter(name => name !== '학습' && name !== '대상자' && name !== '대상자없음');
+                    validTraineeNamesArray = Array.from(new Set(namesWithoutPrep));
+                    if (validTraineeNamesArray.length === 0) validTraineeNamesArray = ['-'];
+                } else validTraineeNamesArray = ['-'];
+
+                const scheduleKey = `${item.date}|${item.team}|${item.group}|${item.name}|${item.time}|${targetText}`;
+                if (!scheduleSet.has(scheduleKey)) { scheduleSet.add(scheduleKey); validScheduleGroups['전체'].push(item); }
+
+                validTraineeNamesArray.forEach(name => {
+                    let cleanStudentName = name.replace(/\s+/g, '');
+                    if (cleanStudentName.includes('보조강사')) return;
+                    let traineeUniqueKey = (cleanStudentName !== '-' && cleanStudentName !== '') ? `${item.date}|${item.team}|${item.group}|${item.name}|${cleanStudentName}` : `${item.date}|${item.team}|${item.group}|${item.name}|${item.time}|${cleanStudentName}`;
+
+                    if (!groupTargetSet.has(traineeUniqueKey)) {
+                        groupTargetSet.add(traineeUniqueKey);
+                        const traineeItem = { ...item, splitName: name }; traineeItem.isConsecutiveAssistant = false;
+
+                        if (!isExcludedCondition(traineeItem, name)) {
+                            let sName = name ? name.trim() : '';
+                            const excludeKeywords = ['보조강사', '개발중', '자체학습', '오전수업', '컴1/보조', '컴기초1반', '컴활용/보조'];
+                            let isExcludedSession = !sName || sName === '-';
+                            if (!isExcludedSession) { for (let kw of excludeKeywords) { if (sName.includes(kw)) { isExcludedSession = true; break; } } }
+                            if (!isExcludedSession) {
+                                let matchedObj = traineeItem.sessionCounts ? traineeItem.sessionCounts.find(sc => sName.includes(sc.name) || sc.name.includes(sName)) : null;
+                                let currentCount = matchedObj ? matchedObj.count : 0;
+                                traineeItem.sessionCount = currentCount;
+                                if (!sessionMap.has(sName)) { sessionMap.set(sName, traineeItem); }
+                                else {
+                                    let existingCount = parseInt(sessionMap.get(sName).sessionCount, 10);
+                                    if (isNaN(existingCount)) existingCount = 0;
+                                    if (currentCount > existingCount) sessionMap.set(sName, traineeItem);
+                                }
+                            }
+                        }
+
+                        let calcCount = 0;
+                        let isFacility = name.includes('복지관') || name.includes('경로당') || name.includes('센터') || (item.location && (item.location.includes('복지관') || item.location.includes('경로당') || item.location.includes('센터')));
+                        const checkStr = rawStatus.replace(/\s+/g, '');
+                        if (checkStr.includes('결석') || checkStr.includes('취소')) {
+                            const match = rawStatus.match(/^(\d+)/); if (match && validTraineeNamesArray.length === 1) calcCount = parseInt(match[1], 10); else calcCount = 1;
+                        } else if (isFacility && rawStatus) {
+                            const match = rawStatus.match(/^(\d+)/); if (match && validTraineeNamesArray.length === 1) calcCount = parseInt(match[1], 10); else calcCount = 1;
+                        } else if (name === '-') {
+                            const match = rawStatus.match(/^(\d+)/); if (match) calcCount = parseInt(match[1], 10); else calcCount = 0;
+                        } else { calcCount = 1; }
+
+                        traineeItem.calcCount = calcCount;
+
+                        // 슬래시(/) 포함 여부에 따른 개별 학생의 상태 판단 (출석, 결석, 취소, 미확인) - 요청사항 반영
+                        let studentStatus = '미확인';
+                        if (rawStatus.includes('/')) {
+                            const nameIdx = validTraineeNamesArray.indexOf(name);
+                            const parts = rawStatus.split('/').map(p => p.trim());
+                            if (nameIdx !== -1 && nameIdx < parts.length) {
+                                const myStatus = parts[nameIdx];
+                                if (myStatus.includes('결석')) studentStatus = '결석';
+                                else if (myStatus.includes('취소') || myStatus.includes('휴가')) studentStatus = '취소';
+                                else if (/\d/.test(myStatus)) studentStatus = '출석';
+                                else if (myStatus !== "") studentStatus = '미확인';
+                            } else {
+                                if (stat_sAttend >= 1) studentStatus = '출석';
+                                else if (stat_sAbsent >= 1) studentStatus = '결석';
+                                else if (stat_sCancel >= 1) studentStatus = '취소';
+                            }
+                        } else {
+                            if (stat_sAttend >= 1) studentStatus = '출석';
+                            else if (stat_sAbsent >= 1 && stat_sAttend === 0) studentStatus = '결석';
+                            else if (stat_sCancel >= 1 && stat_sAttend === 0 && stat_sAbsent === 0) studentStatus = '취소';
+                        }
+
+                        traineeGroups['전체'].push(traineeItem);
+                        if(traineeGroups[studentStatus]) {
+                            traineeGroups[studentStatus].push(traineeItem);
+                        } else {
+                            traineeGroups['미확인'].push(traineeItem);
+                        }
+                    }
+                });
+            });
+
+            sessionMap.forEach((item, sName) => {
+                let count = parseInt(item.sessionCount, 10);
+                let sessionGroupName = '';
+                if (isNaN(count) || !item.sessionCount) sessionGroupName = '7회 이하';
+                else if (count <= 7) sessionGroupName = '7회 이하';
+                else if (count <= 14) sessionGroupName = '8~14회';
+                else sessionGroupName = '15회 이상';
+                item.sessionGroupName = sessionGroupName;
+                item.calcCount = 1;
+                sessionGroups[sessionGroupName].push(item); sessionGroups['전체'].push(item);
+            });
+            window.currentPeriodSessionGroups = sessionGroups;
+
+            const teacherGroups = { '전체': [], '출근': [], '휴가': [] };
+            teacherStatusMap.forEach((tData) => {
+                const finalStatus = tData.status === '휴가' ? '휴가' : '출근';
+                tData.item.teacherFinalStatus = finalStatus;
+                teacherGroups['전체'].push(tData.item); teacherGroups[finalStatus].push(tData.item);
+            });
+
+            const filterTraineeForGraph = (item) => { if (isExcludedCondition(item, item.splitName) || item.isConsecutiveAssistant) return false; return true; };
+            const filterScheduleForGraph = (item) => {
+                if (isExcludedCondition(item, item.target)) return false;
+                const t = (item.target || '').trim();
+                if (t === '-' || t === '' || item.isConsecutiveAssistant) return false;
+                return true;
+            };
+
+            const graphTraineesAll = traineeGroups['전체'].filter(filterTraineeForGraph);
+            const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
+            const sumTraineeCount = (arr) => arr.reduce((sum, item) => sum + (item.calcCount || 0), 0);
+
+            document.getElementById('kpiSession').textContent = sumTraineeCount(sessionGroups['전체']);
+            globalFilteredSummaryData = globalSummaryData.filter(item => item.dateObj >= startD && item.dateObj <= endD);
+
+            if (globalFilteredSummaryData && globalFilteredSummaryData.length > 0) {
+                let sumTeacherAttended = 0, sumTeacherVacation = 0, sumTraineeAttended = 0, sumTraineeAbsent = 0, sumTraineeCancel = 0, sumTraineeUnconfirmed = 0, sumScheduleCompleted = 0, sumScheduleUnconfirmed = 0;
+
+                globalFilteredSummaryData.forEach(item => {
+                    sumTeacherAttended += item.teacherAttended; sumTeacherVacation += item.teacherVacation;
+                    sumTraineeAttended += item.traineeAttended; sumTraineeAbsent += item.traineeAbsent;
+                    sumTraineeCancel += item.traineeCancel; sumTraineeUnconfirmed += item.traineeUnconfirmed;
+                    sumScheduleCompleted += item.scheduleCompleted; sumScheduleUnconfirmed += item.scheduleUnconfirmed;
+                });
+
+                const totalTeacher = sumTeacherAttended + sumTeacherVacation;
+                document.getElementById('kpiTeacher').textContent = totalTeacher > 0 ? sumTeacherAttended : "-";
+
+                const totalTraineesSum = sumTraineeAttended + sumTraineeAbsent + sumTraineeUnconfirmed;
+                document.getElementById('kpiTrainee').textContent = totalTraineesSum > 0 ? totalTraineesSum : "-";
+
+                const totalSchedules = sumScheduleCompleted + sumScheduleUnconfirmed;
+                document.getElementById('kpiSchedule').textContent = totalSchedules > 0 ? totalSchedules : "-";
+
+                document.getElementById('gaugeTeacher').innerHTML = createGaugeHTML('출근률', totalTeacher, '명', [
+                    { label: '출근', count: sumTeacherAttended, color: '#3b82f6' },
+                    { label: '휴가', count: sumTeacherVacation, color: '#38bdf8' }
+                ], 'teacher');
+
+                document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTraineesSum, '명', [
+                    { label: '출석', count: sumTraineeAttended, color: '#3b82f6' },
+                    { label: '결석', count: sumTraineeAbsent, color: '#ef4444' },
+                    { label: '취소', count: sumTraineeCancel, color: '#fdba74', hideFromGauge: true },
+                    { label: '미확인', count: sumTraineeUnconfirmed, color: '#9ca3af' }
+                ], 'trainee');
+
+                document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', totalSchedules, '건', [
+                    { label: '완료', count: sumScheduleCompleted, color: '#3b82f6' },
+                    { label: '미확인', count: sumScheduleUnconfirmed, color: '#9ca3af' }
+                ], 'schedule');
+            } else {
+                let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalUnconfirmed = 0;
+                graphSchedulesAll.forEach(item => {
+                    totalAttend += item.statAttend || 0; totalAbsent += item.statAbsent || 0;
+                    totalCancel += item.statCancel || 0; totalUnconfirmed += item.statUnconfirmed || 0;
+                });
+                let totalTrainees = totalAttend + totalAbsent + totalUnconfirmed;
+
+                document.getElementById('kpiTeacher').textContent = teacherGroups['출근'].length;
+                document.getElementById('kpiTrainee').textContent = totalTrainees;
+                document.getElementById('kpiSchedule').textContent = graphSchedulesAll.length;
+
+                document.getElementById('gaugeTeacher').innerHTML = createGaugeHTML('출근률', teacherGroups['전체'].length, '명', [
+                    { label: '출근', count: teacherGroups['출근'].length, color: '#3b82f6' },
+                    { label: '휴가', count: teacherGroups['휴가'].length, color: '#38bdf8' }
+                ], 'teacher');
+
+                document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTrainees, '명', [
+                    { label: '출석', count: totalAttend, color: '#3b82f6' },
+                    { label: '결석', count: totalAbsent, color: '#ef4444' },
+                    { label: '취소', count: totalCancel, color: '#fdba74', hideFromGauge: true },
+                    { label: '미확인', count: totalUnconfirmed, color: '#9ca3af' }
+                ], 'trainee');
+
+                let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0).length;
+                let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
+
+                document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', graphSchedulesAll.length, '건', [
+                    { label: '완료', count: schedCompletedCount, color: '#3b82f6' },
+                    { label: '미확인', count: schedUnconfCount, color: '#9ca3af' }
+                ], 'schedule');
+            }
+
+            // ✅ 요청하신 대로 이미지와 100% 동일하게 파랑, 주황, 하늘색 적용 (session gauge)
+            const sessionGaugeHtml = createGaugeHTML('15회 이상 비율', sumTraineeCount(sessionGroups['전체']), '명', [
+                { label: '15회 이상', count: sumTraineeCount(sessionGroups['15회 이상']), color: '#3b82f6' },
+                { label: '8~14회', count: sumTraineeCount(sessionGroups['8~14회']), color: '#f97316' },
+                { label: '7회 이하', count: sumTraineeCount(sessionGroups['7회 이하']), color: '#0ea5e9' }
+            ], 'session', 0);
+            document.getElementById('gaugeSession').innerHTML = sessionGaugeHtml;
+
+            const weeklyDataMap = new Map();
+            let curr = new Date(startD); const day = curr.getDay(); const diff = curr.getDate() - day + (day === 0 ? -6 : 1);
+            curr.setDate(diff);
+            // 오늘이 주말(토/일)이면 현재 주를 제외하고 직전 주까지만 그리기
+            const todayForWeek = new Date(); todayForWeek.setHours(0, 0, 0, 0);
+            const todayDow = todayForWeek.getDay(); // 0=일, 6=토
+            let trendEndD = new Date(endD);
+            if (todayDow === 0 || todayDow === 6) {
+                const prevFriday = new Date(todayForWeek);
+                const daysToFriday = todayDow === 0 ? 2 : 1; // 일요일이면 2일 전(금), 토요일이면 1일 전(금)
+                prevFriday.setDate(prevFriday.getDate() - daysToFriday);
+                if (trendEndD > prevFriday) trendEndD = prevFriday;
+            }
+            while (curr <= trendEndD) { weeklyDataMap.set(getWeekLabel(curr), 0); curr.setDate(curr.getDate() + 7); }
+            const endWeekLabel = getWeekLabel(trendEndD);
+            if (!weeklyDataMap.has(endWeekLabel)) weeklyDataMap.set(endWeekLabel, 0);
+
+            let scheduleCompletedItems = graphSchedulesAll.filter(it => !(it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0));
+            let scheduleUnconfirmedItems = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0);
+
+            globalDataTeacher = { '전체': teacherGroups['전체'], '출근': teacherGroups['출근'], '휴가': teacherGroups['휴가'] };
+            globalDataTrainee = { '전체': graphSchedulesAll, '출석': graphSchedulesAll.filter(i => i.statAttend >= 1), '결석': graphSchedulesAll.filter(i => i.statAbsent >= 1), '취소': graphSchedulesAll.filter(i => i.statCancel >= 1), '미확인': graphSchedulesAll.filter(i => i.statUnconfirmed >= 1) };
+            globalDataSchedule = { '전체': graphSchedulesAll, '완료': scheduleCompletedItems, '미확인': scheduleUnconfirmedItems };
+            globalDataSession = graphTraineesAll;
+            globalWeeklyLabels = Array.from(weeklyDataMap.keys());
+
+            const selTeacher = document.getElementById('trendSelectTeacher').value || '전체';
+            const selTrainee = document.getElementById('trendSelectTrainee').value || '전체';
+            const selSchedule = document.getElementById('trendSelectSchedule').value || '전체';
+            const minSess = parseInt(document.getElementById('sessionMin').value, 10) || 1;
+            const maxSess = parseInt(document.getElementById('sessionMax').value, 10) || 15;
+
+            const getWeeklyCounts = (dataArray, countType = 'none', isSession = false) => {
+                const tempMap = new Map();
+                globalWeeklyLabels.forEach(w => tempMap.set(w, 0));
+                (dataArray || []).forEach(item => {
+                    if (isSession && item.sessionCount) {
+                        const sCount = parseInt(item.sessionCount, 10);
+                        if (sCount >= minSess && sCount <= maxSess) {
+                            const w = getWeekLabel(item.dateObj);
+                            if (tempMap.has(w)) tempMap.set(w, tempMap.get(w) + (item.calcCount || 0));
+                        }
+                    } else if (!isSession) {
+                        const w = getWeekLabel(item.dateObj);
+                        if (tempMap.has(w)) {
+                            let addVal = 1;
+                            if (countType === 'attend') addVal = item.statAttend || 0;
+                            else if (countType === 'absent') addVal = item.statAbsent || 0;
+                            else if (countType === 'cancel') addVal = item.statCancel || 0;
+                            else if (countType === 'unconfirmed') addVal = item.statUnconfirmed || 0;
+                            else if (countType === 'allStats') addVal = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statUnconfirmed || 0);
+                            tempMap.set(w, tempMap.get(w) + addVal);
+                        }
+                    }
+                });
+                return globalWeeklyLabels.map(l => tempMap.get(l));
+            };
+
+            const getWeeklySessionTrendData = () => {
+                const minS = parseInt(document.getElementById('sessionMin').value, 10) || 0;
+                const maxS = parseInt(document.getElementById('sessionMax').value, 10) || 100;
+
+                const weeklySessionMaps = {};
+                globalWeeklyLabels.forEach(w => weeklySessionMaps[w] = new Map());
+
+                periodData.forEach(item => {
+                    const targetText = (item.target || "").trim();
+                    const isEmptyTarget = (!targetText || targetText === '-');
+
+                    let validTraineeNamesArray = [];
+                    if (!isEmptyTarget) {
+                        const allNames = targetText.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴').split(/[/, \n]+/).filter(n => n.trim().length > 0 && n !== '-');
+                        const namesWithoutPrep = allNames.filter(name => name !== '학습' && name !== '대상자' && name !== '대상자없음');
+                        validTraineeNamesArray = Array.from(new Set(namesWithoutPrep));
+                        if (validTraineeNamesArray.length === 0) validTraineeNamesArray = ['-'];
+                    } else validTraineeNamesArray = ['-'];
+
+                    const w = item.dateObj ? getWeekLabel(item.dateObj) : null;
+                    if (!w || !weeklySessionMaps[w]) return;
+
+                    validTraineeNamesArray.forEach(name => {
+                        let cleanStudentName = name.replace(/\s+/g, '');
+                        if (cleanStudentName.includes('보조강사')) return;
+
+                        const traineeItem = { ...item, splitName: name };
+                        if (!isExcludedCondition(traineeItem, name)) {
+                            let sName = name ? name.trim() : '';
+                            const excludeKeywords = ['보조강사', '개발중', '자체학습', '오전수업', '컴1/보조', '컴기초1반', '컴활용/보조'];
+                            let isExcludedSession = !sName || sName === '-';
+                            if (!isExcludedSession) { for (let kw of excludeKeywords) { if (sName.includes(kw)) { isExcludedSession = true; break; } } }
+
+                            if (!isExcludedSession) {
+                                let matchedObj = traineeItem.sessionCounts ? traineeItem.sessionCounts.find(sc => sName.includes(sc.name) || sc.name.includes(sName)) : null;
+                                let currentCount = matchedObj ? matchedObj.count : 0;
+
+                                const mapForWeek = weeklySessionMaps[w];
+                                if (!mapForWeek.has(sName)) {
+                                    mapForWeek.set(sName, currentCount);
+                                } else {
+                                    let existingCount = parseInt(mapForWeek.get(sName), 10);
+                                    if (isNaN(existingCount)) existingCount = 0;
+                                    if (currentCount > existingCount) mapForWeek.set(sName, currentCount);
+                                }
+                            }
+                        }
+                    });
+                });
+
+                return globalWeeklyLabels.map(w => {
+                    const mapForWeek = weeklySessionMaps[w];
+                    let countInRange = 0;
+                    mapForWeek.forEach(count => {
+                        if (count >= minS && count <= maxS) countInRange++;
+                    });
+                    return countInRange;
+                });
+            };
+
+            let dataTeacher = []; let dataTrainee = []; let dataSchedule = []; const dataSession = getWeeklySessionTrendData();
+
+            if (globalFilteredSummaryData && globalFilteredSummaryData.length > 0) {
+                const tempTeacher = new Map(); const tempTrainee = new Map(); const tempSchedule = new Map();
+                globalWeeklyLabels.forEach(w => { tempTeacher.set(w, 0); tempTrainee.set(w, 0); tempSchedule.set(w, 0); });
+
+                globalFilteredSummaryData.forEach(item => {
+                    const w = getWeekLabel(item.dateObj);
+                    if (tempTeacher.has(w)) {
+                        let tAdd = 0;
+                        if (selTeacher === '전체') tAdd = item.teacherAttended + item.teacherVacation;
+                        else if (selTeacher === '출근') tAdd = item.teacherAttended;
+                        else if (selTeacher === '휴가') tAdd = item.teacherVacation;
+                        tempTeacher.set(w, tempTeacher.get(w) + tAdd);
+                    }
+                    if (tempTrainee.has(w)) {
+                        let trAdd = 0;
+                        if (selTrainee === '전체') trAdd = item.traineeAttended + item.traineeAbsent + item.traineeUnconfirmed;
+                        else if (selTrainee === '출석') trAdd = item.traineeAttended;
+                        else if (selTrainee === '결석') trAdd = item.traineeAbsent;
+                        else if (selTrainee === '취소') trAdd = item.traineeCancel;
+                        else if (selTrainee === '미확인') trAdd = item.traineeUnconfirmed;
+                        tempTrainee.set(w, tempTrainee.get(w) + trAdd);
+                    }
+                    if (tempSchedule.has(w)) {
+                        let sAdd = 0;
+                        if (selSchedule === '전체') sAdd = item.scheduleCompleted + item.scheduleUnconfirmed;
+                        else if (selSchedule === '완료') sAdd = item.scheduleCompleted;
+                        else if (selSchedule === '미확인') sAdd = item.scheduleUnconfirmed;
+                        tempSchedule.set(w, tempSchedule.get(w) + sAdd);
+                    }
+                });
+                dataTeacher = globalWeeklyLabels.map(l => tempTeacher.get(l));
+                dataTrainee = globalWeeklyLabels.map(l => tempTrainee.get(l));
+                dataSchedule = globalWeeklyLabels.map(l => tempSchedule.get(l));
+            } else {
+                dataTeacher = getWeeklyCounts(globalDataTeacher[selTeacher], 'none', false);
+                let tCountType = 'allStats';
+                if (selTrainee === '출석') tCountType = 'attend'; else if (selTrainee === '결석') tCountType = 'absent'; else if (selTrainee === '취소') tCountType = 'cancel'; else if (selTrainee === '미확인') tCountType = 'unconfirmed';
+                dataTrainee = getWeeklyCounts(globalDataTrainee[selTrainee], tCountType, false);
+                dataSchedule = getWeeklyCounts(globalDataSchedule[selSchedule], 'none', false);
+            }
+
+            renderTrendCharts(globalWeeklyLabels, dataTeacher, dataTrainee, dataSchedule, dataSession);
+
+            chartTeacher.data.datasets[0].label = selTeacher + ' 선생님 수';
+            chartTrainee.data.datasets[0].label = selTrainee + ' 대상자 수';
+            chartSchedule.data.datasets[0].label = (selSchedule === '완료' ? '완료' : selSchedule) + ' 일정 수';
+
+            const makeStatBtnModal = (label, count, activeBgClass) => {
+                if (count >= 1) return `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${activeBgClass}"><span class="mr-0.5">${label}</span><span>${count}</span></div>`; return '';
+            };
+
+            const getCardHtml = (item, type, filterStr) => {
+                let studentName = (type === 'schedule') ? item.target : item.splitName;
+                if (studentName === '-' || studentName === '' || !studentName) return '';
+
+                let isHiddenBadge = isExcludedCondition(item, studentName);
+                let isPartial = item.isPartial;
+                let rawStatus = (item.status && item.status.trim() !== '-' && item.status.trim() !== '') ? item.status.trim() : '';
+
+                let sAttend = item.statAttend || 0; let sAbsent = item.statAbsent || 0; let sCancel = item.statCancel || 0; let sUnconfirmed = item.statUnconfirmed || 0;
+
+                let finalSessionCount = item.sessionCount;
+                if (!finalSessionCount && item.sessionCounts && Array.isArray(item.sessionCounts)) {
+                    let searchNames = studentName.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴').split(/[/, \n()]+/).filter(n => n.trim().length > 0 && n !== '-');
+                    let maxCount = 0;
+                    searchNames.forEach(sName => {
+                        let matched = item.sessionCounts.find(sc => sName.includes(sc.name) || sc.name.includes(sName));
+                        if (matched) maxCount = Math.max(maxCount, parseInt(matched.count, 10) || 0);
+                    });
+                    if (maxCount > 0) finalSessionCount = maxCount;
+                }
+
+                let sessionBadgeModalHtml = '';
+                if (finalSessionCount) {
+                    let badgeClass = ''; const count = parseInt(finalSessionCount, 10);
+                    if (count >= 15) badgeClass = 'bg-purple-600'; else if (count >= 8) badgeClass = 'bg-purple-500'; else badgeClass = 'bg-teal-500';
+                    sessionBadgeModalHtml = `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${badgeClass}"><span class="mr-0.5">${count}</span><span>회차</span></div>`;
+                }
+
+                let topRowBtns = '';
+                let allBtnsHtml = [makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-slate-500'), sessionBadgeModalHtml].filter(Boolean).join('');
+                if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-1 w-full mb-1.5">${allBtnsHtml}</div>`;
+                if (filterStr === '미확인' && topRowBtns === '') return '';
+
+                let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
+                if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
+                let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
+                let nameHtml = `<div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${studentName}${locHtmlStr}"><span class="truncate block w-full">${studentName}${lHtml}</span></div>`;
+
+                let memoText = window.autoCorrectText(rawStatus);
+                let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
+                let memoColorClass = 'text-indigo-300';
+                const rawStatusCheck2 = rawStatus.replace(/\s+/g, '');
+                if (rawStatusCheck2.includes('선생님휴가')) memoColorClass = 'text-sky-400 font-bold';
+                else if (rawStatusCheck2.includes('결석') || rawStatusCheck2.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
+                let memoHtml = `<div class="truncate mt-0.5 leading-tight ${cleanMemoText ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
+
+                let teacherRowHtml = `<div class="w-full flex items-center justify-start mt-1.5 gap-1.5 truncate pt-1.5 border-t border-slate-600/50 border-dashed"><span class="text-[clamp(10px,0.9vw,13px)] text-indigo-400 font-bold shrink-0">${item.team} ${item.group}</span><span class="text-[clamp(12px,1.1vw,15px)] text-slate-300 font-extrabold truncate" title="${item.name} 선생님">${item.name}</span></div>`;
+
+                if (isHiddenBadge) {
+                    nameHtml = `<div class="w-full flex flex-col items-center justify-center font-black text-[clamp(14px,1.4vw,20px)] text-slate-200 h-full py-1"><span class="text-center w-full truncate">${studentName}</span></div>`;
+                    timeHtml = ''; memoHtml = '';
+                }
+
+                let cBg = '';
+                if (rawStatusCheck2.includes('휴가')) cBg = 'bg-sky-500/30 border-sky-400/50';
+                else if (sAttend >= 1) cBg = 'bg-indigo-900/30 border-indigo-500/30';
+                else if (sAbsent >= 1) cBg = 'bg-rose-900/30 border-rose-500/30';
+                else if (sCancel >= 1) cBg = 'bg-orange-900/30 border-orange-500/30';
+                else cBg = 'bg-slate-800/60 border-slate-600/50';
+
+                let cardContentHtml = topRowBtns + timeHtml + nameHtml + (!isHiddenBadge ? memoHtml : '') + teacherRowHtml;
+                return `<div class="${cBg} px-[clamp(16px,2vw,24px)] py-[clamp(10px,1.2vw,16px)] rounded-xl border border-white/10 shadow-sm flex flex-col justify-start w-full max-w-full overflow-hidden text-left">${cardContentHtml}</div>`;
+            };
+
+            const buildHtml = (list, type, filterStr) => {
+                if (list.length === 0) return '<div class="text-center py-20 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                let html = '';
+                const gridClass = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-[clamp(8px,1vw,14px)]';
+
+                if (type === 'trainee' || type === 'schedule') {
+                    let groupedByDate = {}; let dateOrder = [];
+                    list.forEach(item => { if (!groupedByDate[item.date]) { groupedByDate[item.date] = []; dateOrder.push(item.date); } groupedByDate[item.date].push(item); });
+                    dateOrder.forEach(dateStr => {
+                        let groupCount = type === 'schedule' ? groupedByDate[dateStr].length : groupedByDate[dateStr].reduce((sum, item) => sum + (item.calcCount || 0), 0);
+                        let unit = type === 'schedule' ? '건' : '명';
+                        let dateSectionHtml = `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b border-white/10 pb-1 flex items-end gap-2"><span class="font-bold text-indigo-400 text-[clamp(16px,1.4vw,22px)]">${dateStr}</span><span class="text-indigo-300 font-bold text-[clamp(13px,1.2vw,18px)] mb-[1px]">${groupCount}${unit}</span></div><div class="grid ${gridClass}">`;
+                        let hasCards = false;
+                        groupedByDate[dateStr].forEach(item => { let cardHtml = getCardHtml(item, type, filterStr); if (cardHtml) { dateSectionHtml += cardHtml; hasCards = true; } });
+                        dateSectionHtml += `</div>`;
+                        if (hasCards) html += dateSectionHtml;
+                    });
+                } else if (type === 'session') {
+                    let groupedBySession = {};
+                    list.forEach(item => { let grp = item.sessionGroupName; if (!groupedBySession[grp]) groupedBySession[grp] = []; groupedBySession[grp].push(item); });
+                    ['15회 이상', '8~14회', '7회 이하'].forEach(grp => {
+                        if (groupedBySession[grp] && groupedBySession[grp].length > 0) {
+                            let groupCount = groupedBySession[grp].length;
+                            let sessionSectionHtml = `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b border-white/10 pb-1 flex items-end gap-2"><span class="font-bold text-indigo-400 text-[clamp(16px,1.4vw,22px)]">${grp}</span><span class="text-indigo-300 font-bold text-[clamp(13px,1.2vw,18px)] mb-[1px]">${groupCount}명</span></div><div class="grid ${gridClass}">`;
+                            let hasCards = false;
+                            groupedBySession[grp].forEach(item => { let cardHtml = getCardHtml(item, type, filterStr); if (cardHtml) { sessionSectionHtml += cardHtml; hasCards = true; } });
+                            sessionSectionHtml += `</div>`;
+                            if (hasCards) html += sessionSectionHtml;
+                        }
+                    });
+                } else if (type === 'teacher') {
+                    let groupedByDate = {}; let dateOrder = [];
+                    list.forEach(item => { const dStr = item.dateObj ? `${item.dateObj.getMonth() + 1}/${item.dateObj.getDate()}` : item.date; if (!groupedByDate[dStr]) { groupedByDate[dStr] = []; dateOrder.push(dStr); } groupedByDate[dStr].push(item); });
+                    dateOrder.forEach(dateStr => {
+                        html += `<div class="mt-[clamp(16px,2vw,24px)] mb-2 border-b border-white/10 pb-1 flex items-end gap-2"><span class="font-bold text-indigo-400 text-[clamp(16px,1.4vw,22px)]">${dateStr}</span><span class="text-indigo-300 font-bold text-[clamp(13px,1.2vw,18px)] mb-[1px]">${groupedByDate[dateStr].length}명</span></div><div class="grid ${gridClass}">`;
+                        groupedByDate[dateStr].forEach(item => {
+                            let boxClass = item.teacherFinalStatus === '휴가' ? 'bg-sky-500/30 border border-sky-400/50' : 'bg-slate-800/80 border border-slate-600/50';
+                            let textClass = item.teacherFinalStatus === '휴가' ? 'text-sky-300' : 'text-slate-200';
+                            let groupClass = item.teacherFinalStatus === '휴가' ? 'text-sky-400' : 'text-indigo-400';
+                            html += `<div class="${boxClass} p-[clamp(8px,1vw,12px)] rounded-lg shadow-sm text-center flex flex-col justify-center items-center h-full w-full"><span class="font-extrabold ${textClass} break-keep w-full text-[clamp(13px,1.2vw,18px)] leading-snug"><span class="${groupClass} font-bold mr-1 block sm:inline text-[clamp(11px,1vw,14px)]">${item.team} ${item.group}</span>${item.name}</span></div>`;
+                        });
+                        html += '</div>';
+                    });
+                }
+                return html;
+            };
+
+            document.getElementById('kpiCardTeacher').onclick = (e) => {
+                if (e.target.closest('.legend-btn') || e.target.closest('.gauge-center')) return;
+                const startVal = document.getElementById('startDate').value;
+                const d = startVal ? new Date(startVal) : new Date();
+                renderCalendarModal(d.getFullYear(), d.getMonth(), 'teacher', false);
+            };
+
+            document.getElementById('kpiCardTrainee').onclick = (e) => {
+                if (e.target.closest('.legend-btn') || e.target.closest('.gauge-center')) return;
+                const startVal = document.getElementById('startDate').value;
+                const d = startVal ? new Date(startVal) : new Date();
+                renderCalendarModal(d.getFullYear(), d.getMonth(), 'trainee', false);
+            };
+
+            function renderCalendarModal(year, month, type, isUpdate = true) {
+                let modalTitle = '상세 현황';
+                if (type === 'teacher') modalTitle = '선생님 출근/휴가 현황';
+                else if (type === 'trainee') modalTitle = '교육 대상자 출석 현황';
+                else if (type === 'schedule') modalTitle = '일정 완료/미완료 현황';
+                else if (type === 'session') modalTitle = '회차별 인원 분포 현황';
+
+                const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+
+                let html = `
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-white/5">
+                            <button id="prevMonthBtn" class="p-2 hover:bg-slate-700 rounded-lg transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                            <h4 class="text-2xl font-bold text-white">${year}년 ${monthNames[month]}</h4>
+                            <button id="nextMonthBtn" class="p-2 hover:bg-slate-700 rounded-lg transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                        </div>
+                        <div class="calendar-grid">
+                            <div class="calendar-header-day text-rose-400">일</div>
+                            <div class="calendar-header-day">월</div>
+                            <div class="calendar-header-day">화</div>
+                            <div class="calendar-header-day">수</div>
+                            <div class="calendar-header-day">목</div>
+                            <div class="calendar-header-day">금</div>
+                            <div class="calendar-header-day text-blue-400">토</div>
+                `;
+
+                const firstDay = new Date(year, month, 1).getDay();
+                const lastDate = new Date(year, month + 1, 0).getDate();
+                const prevLastDate = new Date(year, month, 0).getDate();
+
+                // 이전 달 날짜들
+                for (let i = firstDay - 1; i >= 0; i--) {
+                    const d = prevLastDate - i;
+                    html += `<div class="calendar-day other-month"><div class="calendar-date text-slate-500">${d}</div></div>`;
+                }
+
+                // 현재 달 날짜들
+                let sessionAsOfData = null;
+                if (type === 'session') {
+                    const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
+                    const dailyStudentAttendances = [];
+                    const groupedByDateAndName = {};
+
+                    allData.forEach(item => {
+                        if (!item.dateObj) return;
+                        const targetText = (item.target || "").trim();
+                        if (!targetText || targetText === '-') return;
+                        const names = targetText.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴').split(/[/, \n]+/).filter(n => n.trim().length > 0 && n !== '-');
+                        const validNames = Array.from(new Set(names.filter(n => !n.includes('보조강사'))));
+                        const dateMs = item.dateObj.getTime();
+                        if (!groupedByDateAndName[dateMs]) groupedByDateAndName[dateMs] = {};
+                        validNames.forEach(name => {
+                            if (!groupedByDateAndName[dateMs][name]) groupedByDateAndName[dateMs][name] = [];
+                            groupedByDateAndName[dateMs][name].push((item.status || "").trim());
+                        });
+                    });
+
+                    Object.keys(groupedByDateAndName).forEach(dateMs => {
+                        const dObj = new Date(parseInt(dateMs));
+                        const studentsOnDay = groupedByDateAndName[dateMs];
+                        Object.keys(studentsOnDay).forEach(name => {
+                            const statuses = studentsOnDay[name];
+                            let hasSession = false;
+                            const hasAbsence = statuses.some(s => s.includes("결석"));
+                            if (hasAbsence) { hasSession = false; }
+                            else {
+                                const hasNumber = statuses.some(s => {
+                                    const parts = s.split(',').map(p => p.trim());
+                                    return parts.some(part => /^[1-9]\d*/.test(part));
+                                });
+                                if (hasNumber) { hasSession = true; }
+                                else {
+                                    const isCanceled = statuses.some(s => s.includes("취소") || s.includes("선생님휴가"));
+                                    if (isCanceled) { hasSession = false; }
+                                    else if (dObj < realToday) { hasSession = false; }
+                                    else { hasSession = true; }
+                                }
+                            }
+                            if (hasSession) dailyStudentAttendances.push({ dateObj: dObj, name: name });
+                        });
+                    });
+
+                    dailyStudentAttendances.sort((a, b) => a.dateObj - b.dateObj);
+                    sessionAsOfData = {};
+                    const runningCounts = {};
+                    const calendarDates = [];
+                    for (let i = 1; i <= lastDate; i++) calendarDates.push(new Date(year, month, i));
+
+                    let attendIdx = 0;
+                    calendarDates.forEach(asOfDate => {
+                        while (attendIdx < dailyStudentAttendances.length && dailyStudentAttendances[attendIdx].dateObj <= asOfDate) {
+                            const name = dailyStudentAttendances[attendIdx].name;
+                            runningCounts[name] = (runningCounts[name] || 0) + 1;
+                            attendIdx++;
+                        }
+                        let c15 = 0, c8_14 = 0, c7 = 0;
+                        Object.values(runningCounts).forEach(count => {
+                            if (count >= 15) c15++; else if (count >= 8) c8_14++; else if (count >= 1) c7++;
+                        });
+                        sessionAsOfData[asOfDate.getDate()] = { c15, c8_14, c7 };
+                    });
+                }
+
+                for (let i = 1; i <= lastDate; i++) {
+                    const currentDayDate = new Date(year, month, i);
+                    const dayOfWeek = currentDayDate.getDay();
+
+                    const dayData = globalSummaryData.find(item => {
+                        return item.dateObj && item.dateObj.getFullYear() === year && item.dateObj.getMonth() === month && item.dateObj.getDate() === i;
+                    });
+
+                    let statsHtml = '';
+                    // 구글 시트에 없는 날짜는 데이터를 표시하지 않음
+                    if (!dayData) {
+                        // 세션 타입의 경우에도 시트에 날짜가 없으면 건너뜀
+                    } else if (type === 'session' && sessionAsOfData && sessionAsOfData[i]) {
+                        const s = sessionAsOfData[i];
+                        statsHtml = `
+                            <div class="calendar-stat-item calendar-stat-session-15plus"><span>15회+</span><span class="font-bold">${s.c15}</span></div>
+                            <div class="calendar-stat-item calendar-stat-session-8to14"><span>8~14회</span><span class="font-bold">${s.c8_14}</span></div>
+                            <div class="calendar-stat-item calendar-stat-session-7minus"><span>7회-</span><span class="font-bold">${s.c7}</span></div>
+                        `;
+                    } else if (dayData) {
+                        if (type === 'teacher') {
+                            statsHtml = `
+                                <div class="calendar-stat-item calendar-stat-teacher-attended"><span>출근</span><span class="font-bold">${dayData.teacherAttended}</span></div>
+                                <div class="calendar-stat-item calendar-stat-teacher-vacation"><span>휴가</span><span class="font-bold">${dayData.teacherVacation}</span></div>
+                            `;
+                        } else if (type === 'trainee') {
+                            statsHtml = `
+                                <div class="calendar-stat-item calendar-stat-trainee-attended"><span>출석</span><span class="font-bold">${dayData.traineeAttended}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-absent"><span>결석</span><span class="font-bold">${dayData.traineeAbsent}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-cancel"><span>취소</span><span class="font-bold">${dayData.traineeCancel}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-unconfirmed"><span>미확인</span><span class="font-bold">${dayData.traineeUnconfirmed}</span></div>
+                            `;
+                        } else if (type === 'schedule') {
+                            statsHtml = `
+                                <div class="calendar-stat-item calendar-stat-schedule-completed"><span>완료</span><span class="font-bold">${dayData.scheduleCompleted}</span></div>
+                                <div class="calendar-stat-item calendar-stat-schedule-unconfirmed"><span>미완료</span><span class="font-bold">${dayData.scheduleUnconfirmed}</span></div>
+                            `;
+                        } else if (type === 'session') {
+                            statsHtml = `
+                                <div class="calendar-stat-item calendar-stat-session-15plus"><span>15회+</span><span class="font-bold">${dayData.session15plus}</span></div>
+                                <div class="calendar-stat-item calendar-stat-session-8to14"><span>8~14회</span><span class="font-bold">${dayData.session8to14}</span></div>
+                                <div class="calendar-stat-item calendar-stat-session-7minus"><span>7회-</span><span class="font-bold">${dayData.session7minus}</span></div>
+                            `;
+                        }
+                    }
+
+                    const dateColor = dayOfWeek === 0 ? 'text-rose-400' : (dayOfWeek === 6 ? 'text-blue-400' : 'text-slate-100');
+                    html += `
+                        <div class="calendar-day">
+                            <div class="calendar-date ${dateColor}">${i}</div>
+                            <div class="flex flex-col gap-1">
+                                ${statsHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 다음 달 날짜들 (42칸 맞추기)
+                const totalCellsSoFar = firstDay + lastDate;
+                const nextCells = (7 - (totalCellsSoFar % 7)) % 7;
+                for (let i = 1; i <= nextCells; i++) {
+                    html += `<div class="calendar-day other-month"><div class="calendar-date text-slate-500">${i}</div></div>`;
+                }
+
+                html += `</div></div>`;
+
+                openKpiModal(modalTitle, html, 'calendar', isUpdate);
+
+                // 이벤트 리스너 추가
+                const prevBtn = document.getElementById('prevMonthBtn');
+                const nextBtn = document.getElementById('nextMonthBtn');
+
+                if (prevBtn) {
+                    prevBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const prev = new Date(year, month - 1, 1);
+                        renderCalendarModal(prev.getFullYear(), prev.getMonth(), type);
+                    };
+                }
+                if (nextBtn) {
+                    nextBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const next = new Date(year, month + 1, 1);
+                        renderCalendarModal(next.getFullYear(), next.getMonth(), type);
+                    };
+                }
+            }
+
+            document.getElementById('kpiCardSession').onclick = (e) => {
+                if (e.target.closest('.legend-btn') || e.target.closest('.gauge-center')) return;
+                const startVal = document.getElementById('startDate').value;
+                const d = startVal ? new Date(startVal) : new Date();
+                renderCalendarModal(d.getFullYear(), d.getMonth(), 'session', false);
+            };
+
+            document.getElementById('kpiCardSchedule').onclick = (e) => {
+                if (e.target.closest('.legend-btn') || e.target.closest('.gauge-center')) return;
+                const startVal = document.getElementById('startDate').value;
+                const d = startVal ? new Date(startVal) : new Date();
+                renderCalendarModal(d.getFullYear(), d.getMonth(), 'schedule', false);
+            };
+
+            document.addEventListener('click', function (e) {
+                const legendBtn = e.target.closest('.legend-btn');
+                if (legendBtn && legendBtn.dataset.type === 'session') {
+                    e.stopPropagation();
+                    if (!window.currentPeriodSessionGroups) return;
+                    const filter = legendBtn.dataset.filter;
+                    const list = window.currentPeriodSessionGroups[filter] || [];
+
+                    const nameMap = new Map();
+                    list.forEach(item => {
+                        let sName = item.splitName || item.name;
+                        if (sName && sName !== '-') nameMap.set(sName, item.sessionCount || 0);
+                    });
+
+                    const sortedNames = Array.from(nameMap.keys()).sort((a, b) => a.localeCompare(b, 'ko'));
+                    let titleStr = filter === '전체' ? '회차별 인원 명단 (전체)' : `회차별 인원 명단 (${filter})`;
+
+                    let html = '<div class="p-[clamp(12px,1.5vw,24px)] bg-slate-800/50 rounded-xl border border-slate-600/50 mt-4">';
+                    if (sortedNames.length === 0) {
+                        html += '<div class="text-center py-10 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+                    } else {
+                        html += '<div class="grid grid-cols-4 md:grid-cols-10 gap-[clamp(4px,0.8vw,10px)]">';
+                        sortedNames.forEach(name => {
+                            const count = nameMap.get(name);
+                            html += `<div class="bg-slate-700/80 hover:bg-slate-600 border border-slate-500/50 rounded px-1 py-2 text-center text-slate-200 font-bold text-[clamp(10px,1.1vw,16px)] whitespace-nowrap shadow-sm transition-colors cursor-default" title="${name} (${count}회)">${name} <span class="text-indigo-300 font-normal ml-0.5 text-[0.85em]">${count}회</span></div>`;
+                        });
+                        html += '</div>';
+                    }
+                    html += '</div>';
+
+                    openKpiModal(titleStr, html, 'kpiCardSession', sortedNames.length);
+                }
+            });
+        }
+
+        // 10. Init Event Listeners
+        document.getElementById('applyPeriodBtn').addEventListener('click', async () => {
+            // 구글 시트에서 최신 데이터를 다시 받아온 뒤 통계 재계산 → renderDashboard()는 내부에서 자동 호출됨
+
+            // 구글 시트에서 최신 데이터를 다시 받아온 뒤 통계 재계산 → renderDashboard()는 내부에서 자동 호출됨
+            const savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
+            await loadDataFromGoogleSheets(savedUrls, true);
+        });
+        document.getElementById('fetchDataBtn').addEventListener('click', () => {
+            const currentUrls = inputs.map(i => i.value.trim());
+            if (currentUrls.every(url => url === '')) return;
+            localStorage.setItem('googleSheetUrls', JSON.stringify(currentUrls));
+            loadDataFromGoogleSheets(currentUrls, false);
+            setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
+            startAutoSync();
+        });
+        window.addEventListener('DOMContentLoaded', () => {
+            window.loadChartFilters();
+            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
+            inputs[0].value = savedUrls[0] || ''; inputs[1].value = savedUrls[1] || ''; inputs[2].value = savedUrls[2] || '';
+            if (savedUrls.some(url => url.trim() !== '')) { loadDataFromGoogleSheets(savedUrls, false); startAutoSync(); }
+            else { setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden'); }
+        });
+    </script>
+</body>
+
+</html>
