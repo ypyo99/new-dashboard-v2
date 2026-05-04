@@ -532,7 +532,7 @@
                         <select id="trendSelectSchedule"
                             class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-purple-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
                             <option value="전체">전체</option>
-                            <option value="완료">완료(출석)</option>
+                            <option value="완료">출석</option>
                             <option value="미확인">미확인</option>
                         </select>
                     </div>
@@ -1545,7 +1545,7 @@
             };
             chartTeacher = createChart(chartTeacher, 'trendChartTeacher', '출근 선생님 수', dataTeacher, '#3b82f6');
             chartTrainee = createChart(chartTrainee, 'trendChartTrainee', '출석 대상자 수', dataTrainee, '#22c55e');
-            chartSchedule = createChart(chartSchedule, 'trendChartSchedule', '완료 일정 수', dataSchedule, '#a855f7');
+            chartSchedule = createChart(chartSchedule, 'trendChartSchedule', '출석 일정 수', dataSchedule, '#a855f7');
             chartSession = createChart(chartSession, 'trendChartSession', '전체 회차 인원 수', dataSession, '#f97316');
 
             // 그래프 클릭 이벤트 추가
@@ -1861,7 +1861,7 @@
                 ], 'trainee');
 
                 document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', totalSchedules, '건', [
-                    { label: '완료', count: sumScheduleCompleted, color: '#3b82f6' },
+                    { label: '출석', count: sumScheduleCompleted, color: '#3b82f6' },
                     { label: '미확인', count: sumScheduleUnconfirmed, color: '#9ca3af' }
                 ], 'schedule');
             } else {
@@ -1892,7 +1892,7 @@
                 let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
 
                 document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', graphSchedulesAll.length, '건', [
-                    { label: '완료', count: schedCompletedCount, color: '#3b82f6' },
+                    { label: '출석', count: schedCompletedCount, color: '#3b82f6' },
                     { label: '미확인', count: schedUnconfCount, color: '#9ca3af' }
                 ], 'schedule');
             }
@@ -2070,7 +2070,7 @@
 
             chartTeacher.data.datasets[0].label = selTeacher + ' 선생님 수';
             chartTrainee.data.datasets[0].label = selTrainee + ' 대상자 수';
-            chartSchedule.data.datasets[0].label = (selSchedule === '완료' ? '완료' : selSchedule) + ' 일정 수';
+            chartSchedule.data.datasets[0].label = (selSchedule === '완료' ? '출석' : selSchedule) + ' 일정 수';
 
             const makeStatBtnModal = (label, count, activeBgClass) => {
                 if (count >= 1) return `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[clamp(9px,0.8vw,11px)] font-bold shadow-sm text-white ${activeBgClass}"><span class="mr-0.5">${label}</span><span>${count}</span></div>`; return '';

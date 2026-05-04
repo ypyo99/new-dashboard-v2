@@ -1532,7 +1532,7 @@
             ], 'trainee');
 
             document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', dData.graphSchedulesAll.length, '건', [
-                { label: '완료', count: dData.schedCompletedCount, color: '#3b82f6' },
+                { label: '출석', count: dData.schedCompletedCount, color: '#3b82f6' },
                 { label: '미확인', count: dData.schedUnconfCount, color: '#9ca3af' }
             ], 'schedule');
 
@@ -1646,7 +1646,13 @@
                             }
 
                             const uid = 'sched_' + it.originalIndex + '_' + idx;
-                            window.scheduleDetailsMap[uid] = { ...it, displayStatus: sAttend >= 1 ? '완료' : (sAbsent >= 1 ? '결석' : (sCancel >= 1 ? '취소' : '미확인')), badgeClass: 'bg-slate-600 text-white', isExcluded: isGridExcluded, isConsecutiveAssistant: isConsecutiveAssistant };
+                            let dStatus = sAttend >= 1 ? '출석' : (sAbsent >= 1 ? '결석' : (sCancel >= 1 ? '취소' : '미확인'));
+                            let bClass = 'bg-slate-600 text-white';
+                            if (dStatus === '출석') bClass = 'bg-blue-600 text-white';
+                            else if (dStatus === '결석') bClass = 'bg-red-500 text-white';
+                            else if (dStatus === '취소') bClass = 'bg-orange-500 text-white';
+
+                            window.scheduleDetailsMap[uid] = { ...it, displayStatus: dStatus, badgeClass: bClass, isExcluded: isGridExcluded, isConsecutiveAssistant: isConsecutiveAssistant };
 
                             teamHtml += `<div onclick="showScheduleDetail('${uid}')" class="cursor-pointer hover:opacity-80 active:scale-95 transition-all flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border shadow-sm ${cBg} h-[135px] flex-1 w-full">${topRowBtns}<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${it.time}</span>${blinkHtml}</div></div><div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${tDisp}${fullLocText}"><span class="truncate block w-full">${tDisp}${lHtml}</span></div><div class="truncate mt-0.5 leading-tight ${itRawStat ? dColor : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${itRawStat}">${itRawStat || '-'}</div></div>`;
                         } else {
@@ -1939,7 +1945,7 @@
 
                     if (filter === '전체') {
                         dataList = baseList;
-                    } else if (filter === '완료') {
+                    } else if (filter === '완료' || filter === '출석') {
                         dataList = baseList.filter(it => {
                             let t = (it.target || '').replace(/\s+/g, '');
                             if (t === '-' || t === '') return false;
