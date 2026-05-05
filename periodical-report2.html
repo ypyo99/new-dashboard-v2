@@ -516,7 +516,6 @@
                             <option value="전체">전체</option>
                             <option value="출석">출석</option>
                             <option value="결석">결석</option>
-                            <option value="취소">취소</option>
                             <option value="미확인">미확인</option>
                         </select>
                     </div>
@@ -1199,7 +1198,15 @@
                         } else {
                             const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
                             let countAbsentStr = (stat_pStr.match(/결석/g) || []).length; let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
-                            if (stat_pStr.startsWith("취소")) {
+                            if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
+                                if (stat_sCount === 1) {
+                                    stat_sCancel = 1; stat_sAbsent = 0; stat_sAttend = 0;
+                                } else {
+                                    stat_sCancel = Math.min(stat_sCount, countCancelStr);
+                                    stat_sAbsent = Math.min(stat_sCount - stat_sCancel, countAbsentStr);
+                                    stat_sAttend = Math.max(0, stat_sCount - stat_sCancel - stat_sAbsent);
+                                }
+                            } else if (stat_pStr.startsWith("취소")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
                                 stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
@@ -1682,8 +1689,8 @@
                             stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
                             const parts = stat_pStr.split('/').map(p => p.trim());
                             parts.forEach(part => {
-                                if (part.includes("결석")) stat_sAbsent++;
-                                else if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
+                                if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
+                                else if (part.includes("결석")) stat_sAbsent++;
                                 else if (/\d/.test(part)) stat_sAttend++;
                                 else if (part !== "") stat_sUnconfirmed++;
                             });
@@ -1769,8 +1776,8 @@
                             const parts = rawStatus.split('/').map(p => p.trim());
                             if (nameIdx !== -1 && nameIdx < parts.length) {
                                 const myStatus = parts[nameIdx];
-                                if (myStatus.includes('결석')) studentStatus = '결석';
-                                else if (myStatus.includes('취소') || myStatus.includes('휴가')) studentStatus = '취소';
+                                if (myStatus.includes('취소') || myStatus.includes('휴가')) studentStatus = '취소';
+                                else if (myStatus.includes('결석')) studentStatus = '결석';
                                 else if (/\d/.test(myStatus)) studentStatus = '출석';
                                 else if (myStatus !== "") studentStatus = '미확인';
                             } else {
@@ -1809,9 +1816,19 @@
 
             const teacherGroups = { '전체': [], '출근': [], '휴가': [] };
             teacherStatusMap.forEach((tData) => {
-                const finalStatus = tData.status === '휴가' ? '휴가' : '출근';
-                tData.item.teacherFinalStatus = finalStatus;
                 teacherGroups['전체'].push(tData.item); teacherGroups[finalStatus].push(tData.item);
+            });
+
+            // 모든 일정 및 교육대상자 데이터에 선생님 휴가 여부 플래그 설정
+            validScheduleGroups['전체'].forEach(item => {
+                const tKey = `${item.date}|${item.name}`;
+                const tData = teacherStatusMap.get(tKey);
+                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
+            });
+            traineeGroups['전체'].forEach(item => {
+                const tKey = `${item.date}|${item.name}`;
+                const tData = teacherStatusMap.get(tKey);
+                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
             });
 
             const filterTraineeForGraph = (item) => { if (isExcludedCondition(item, item.splitName) || item.isConsecutiveAssistant) return false; return true; };
@@ -1856,7 +1873,6 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTraineesSum, '명', [
                     { label: '출석', count: sumTraineeAttended, color: '#3b82f6' },
                     { label: '결석', count: sumTraineeAbsent, color: '#ef4444' },
-                    { label: '취소', count: sumTraineeCancel, color: '#fdba74', hideFromGauge: true },
                     { label: '미확인', count: sumTraineeUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
 
@@ -1884,7 +1900,6 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTrainees, '명', [
                     { label: '출석', count: totalAttend, color: '#3b82f6' },
                     { label: '결석', count: totalAbsent, color: '#ef4444' },
-                    { label: '취소', count: totalCancel, color: '#fdba74', hideFromGauge: true },
                     { label: '미확인', count: totalUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
 
@@ -2117,11 +2132,19 @@
 
                 let memoText = window.autoCorrectText(rawStatus);
                 let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
+                
+                const isTeacherOnVacation = item.isTeacherVacation || false;
+
+                if ((isTeacherOnVacation || rawStatusCheck2.includes('휴가')) && !cleanMemoText.includes('선생님휴가')) {
+                    cleanMemoText = cleanMemoText ? '선생님휴가 ' + cleanMemoText : '선생님휴가';
+                }
+
                 let memoColorClass = 'text-indigo-300';
-                const rawStatusCheck2 = rawStatus.replace(/\s+/g, '');
-                if (rawStatusCheck2.includes('선생님휴가')) memoColorClass = 'text-sky-400 font-bold';
+                if (rawStatusCheck2.includes('선생님휴가') || isTeacherOnVacation) memoColorClass = 'text-sky-400 font-bold';
                 else if (rawStatusCheck2.includes('결석') || rawStatusCheck2.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
-                let memoHtml = `<div class="truncate mt-0.5 leading-tight ${cleanMemoText ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
+                
+                let isMemoVisible = cleanMemoText !== '' && cleanMemoText !== '-';
+                let memoHtml = `<div class="truncate mt-0.5 leading-tight ${isMemoVisible ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
 
                 let teacherRowHtml = `<div class="w-full flex items-center justify-start mt-1.5 gap-1.5 truncate pt-1.5 border-t border-slate-600/50 border-dashed"><span class="text-[clamp(10px,0.9vw,13px)] text-indigo-400 font-bold shrink-0">${item.team} ${item.group}</span><span class="text-[clamp(12px,1.1vw,15px)] text-slate-300 font-extrabold truncate" title="${item.name} 선생님">${item.name}</span></div>`;
 
@@ -2186,6 +2209,35 @@
                     });
                 }
                 return html;
+            };
+
+            window.kpiClickHandler = function (type, filter) {
+                let dataList = [];
+                let titleStr = '';
+
+                if (type === 'teacher') {
+                    dataList = globalDataTeacher[filter] || [];
+                    titleStr = filter === '전체' ? '선생님 명단 (전체)' : `선생님 명단 (${filter})`;
+                    openKpiModal(titleStr, buildHtml(dataList, 'teacher', filter), 'kpiCardTeacher', dataList.length);
+                } else if (type === 'trainee') {
+                    if (filter === '전체') {
+                        dataList = globalDataTrainee['전체'];
+                    } else if (filter === '출석') {
+                        dataList = globalDataTrainee['출석'];
+                    } else if (filter === '결석') {
+                        dataList = globalDataTrainee['결석'];
+                    } else if (filter === '취소') {
+                        dataList = globalDataTrainee['취소'];
+                    } else if (filter === '미확인') {
+                        dataList = globalDataTrainee['미확인'];
+                    }
+                    titleStr = filter === '전체' ? '교육 대상자 상세' : `교육 대상자 상세 (${filter})`;
+                    openKpiModal(titleStr, buildHtml(dataList, 'trainee', filter), 'kpiCardTrainee', dataList.length);
+                } else if (type === 'schedule') {
+                    dataList = globalDataSchedule[filter] || [];
+                    titleStr = filter === '전체' ? '일정 내역 (전체)' : `일정 내역 (${filter})`;
+                    openKpiModal(titleStr, buildHtml(dataList, 'schedule', filter), 'kpiCardSchedule', dataList.length);
+                }
             };
 
             document.getElementById('kpiCardTeacher').onclick = (e) => {
@@ -2409,10 +2461,14 @@
 
             document.addEventListener('click', function (e) {
                 const legendBtn = e.target.closest('.legend-btn');
-                if (legendBtn && legendBtn.dataset.type === 'session') {
+                if (!legendBtn) return;
+                
+                const type = legendBtn.dataset.type;
+                const filter = legendBtn.dataset.filter;
+
+                if (type === 'session') {
                     e.stopPropagation();
                     if (!window.currentPeriodSessionGroups) return;
-                    const filter = legendBtn.dataset.filter;
                     const list = window.currentPeriodSessionGroups[filter] || [];
 
                     const nameMap = new Map();
@@ -2438,6 +2494,9 @@
                     html += '</div>';
 
                     openKpiModal(titleStr, html, 'kpiCardSession', sortedNames.length);
+                } else if (window.kpiClickHandler) {
+                    e.stopPropagation();
+                    window.kpiClickHandler(type, filter);
                 }
             });
         }
