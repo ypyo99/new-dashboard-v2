@@ -1337,14 +1337,17 @@
 
             const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
             let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalVacation = 0, totalUnconfirmed = 0;
+            let totalTrainees = 0;
             graphSchedulesAll.forEach(item => {
                 totalAttend += item.statAttend || 0;
                 totalAbsent += item.statAbsent || 0;
                 totalCancel += item.statCancel || 0;
                 totalVacation += item.statVacation || 0;
                 totalUnconfirmed += item.statUnconfirmed || 0;
+                // ✅ 전체 인원 계산 시 출석/결석과 취소가 중복된 경우 1명으로 처리
+                const categorySum = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statVacation || 0) + (item.statUnconfirmed || 0);
+                totalTrainees += Math.max(categorySum, item.statCancel || 0);
             });
-            let totalTrainees = totalAttend + totalAbsent + totalVacation + totalUnconfirmed;
 
             let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0 && (it.statVacation || 0) === 0).length;
             let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
@@ -1587,10 +1590,11 @@
                 { label: '휴가', count: dData.teacherGroups['휴가'].length, color: '#38bdf8' }
             ], 'teacher');
 
-            // ✅ 출석률(교육 대상자 수) 그래프에 '휴가' 범례 추가
+            // ✅ 출석률(교육 대상자 수) 그래프에 '취소', '휴가' 범례 추가
             document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', dData.totalTrainees, '명', [
                 { label: '출석', count: dData.totalAttend, color: '#3b82f6' },
                 { label: '결석', count: dData.totalAbsent, color: '#ef4444' },
+                { label: '취소', count: dData.totalCancel, color: '#f59e0b' },
                 { label: '휴가', count: dData.totalVacation, color: '#0ea5e9' },
                 { label: '미확인', count: dData.totalUnconfirmed, color: '#9ca3af' }
             ], 'trainee');

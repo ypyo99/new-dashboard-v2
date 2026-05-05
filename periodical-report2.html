@@ -1383,14 +1383,17 @@
 
             const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
             let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalVacation = 0, totalUnconfirmed = 0;
+            let totalTrainees = 0;
             graphSchedulesAll.forEach(item => {
                 totalAttend += item.statAttend || 0;
                 totalAbsent += item.statAbsent || 0;
                 totalCancel += item.statCancel || 0;
                 totalVacation += item.statVacation || 0;
                 totalUnconfirmed += item.statUnconfirmed || 0;
+                // ✅ 전체 인원 계산 시 출석/결석과 취소가 중복된 경우 1명으로 처리
+                const categorySum = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statVacation || 0) + (item.statUnconfirmed || 0);
+                totalTrainees += Math.max(categorySum, item.statCancel || 0);
             });
-            let totalTrainees = totalAttend + totalAbsent + totalCancel + totalVacation + totalUnconfirmed;
             let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0 && (it.statVacation || 0) === 0).length;
             let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
 
@@ -2045,7 +2048,22 @@
                 // 💡 상세 데이터에서 집계된 휴가 인원이 더 많으면 보정 (요약 데이터 누락 방지)
                 if (sumTraineeVacation < detailedVacationCount) sumTraineeVacation = detailedVacationCount;
 
-                const totalTraineesSum = sumTraineeAttended + sumTraineeAbsent + sumTraineeCancel + sumTraineeVacation + sumTraineeUnconfirmed;
+                // ✅ 중복 제거된 전체 인원 계산 (시트 요약 데이터 기반)
+                // 요약 데이터에는 중복 정보가 없으므로, 상세 데이터가 있는 경우 상세 데이터의 totalTrainees를 우선 사용하거나
+                // 여기서는 최대한 정확하게 계산하기 위해 상세 데이터를 활용함.
+                let totalTraineesSum = 0;
+                const uniqueDatesInRange = Array.from(new Set(periodData.map(item => item.date)));
+                uniqueDatesInRange.forEach(dateStr => {
+                    const dStats = prepareDailyData(dateStr);
+                    totalTraineesSum += dStats.totalTrainees;
+                });
+                
+                // 상세 데이터가 없는 과거 기간일 경우 fallback (단순 합산)
+                if (totalTraineesSum === 0 && (sumTraineeAttended + sumTraineeAbsent + sumTraineeCancel + sumTraineeVacation + sumTraineeUnconfirmed) > 0) {
+                    totalTraineesSum = sumTraineeAttended + sumTraineeAbsent + sumTraineeVacation + sumTraineeUnconfirmed;
+                    // 취소는 중복 가능성이 있으므로 여기서는 일단 제외하거나 보수적으로 처리 (요약 시트의 한계)
+                }
+
                 document.getElementById('kpiTrainee').textContent = totalTraineesSum > 0 ? totalTraineesSum : "-";
 
                 const totalSchedules = sumScheduleCompleted + sumScheduleUnconfirmed;
@@ -2059,6 +2077,7 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTraineesSum, '명', [
                     { label: '출석', count: sumTraineeAttended, color: '#3b82f6' },
                     { label: '결석', count: sumTraineeAbsent, color: '#ef4444' },
+                    { label: '취소', count: sumTraineeCancel, color: '#f59e0b' },
                     { label: '휴가', count: sumTraineeVacation, color: '#0ea5e9' },
                     { label: '미확인', count: sumTraineeUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
@@ -2069,11 +2088,14 @@
                 ], 'schedule');
             } else {
                 let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalVacation = 0, totalUnconfirmed = 0;
+                let totalTrainees = 0;
                 graphSchedulesAll.forEach(item => {
                     totalAttend += item.statAttend || 0; totalAbsent += item.statAbsent || 0;
                     totalCancel += item.statCancel || 0; totalVacation += item.statVacation || 0; totalUnconfirmed += item.statUnconfirmed || 0;
+                    // ✅ 중복 제거된 전체 인원 계산
+                    const categorySum = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statVacation || 0) + (item.statUnconfirmed || 0);
+                    totalTrainees += Math.max(categorySum, item.statCancel || 0);
                 });
-                let totalTrainees = totalAttend + totalAbsent + totalVacation + totalUnconfirmed;
 
                 document.getElementById('kpiTeacher').textContent = teacherGroups['출근'].length;
                 document.getElementById('kpiTrainee').textContent = totalTrainees;
@@ -2087,6 +2109,7 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTrainees, '명', [
                     { label: '출석', count: totalAttend, color: '#3b82f6' },
                     { label: '결석', count: totalAbsent, color: '#ef4444' },
+                    { label: '취소', count: totalCancel, color: '#f59e0b' },
                     { label: '휴가', count: totalVacation, color: '#0ea5e9' },
                     { label: '미확인', count: totalUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
