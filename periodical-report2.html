@@ -104,16 +104,19 @@
 
         .calendar-day {
             background-color: #0f172a;
-            padding: 4px; /* 셀 내부 여백 최소화 */
+            padding: 4px;
+            /* 셀 내부 여백 최소화 */
             min-height: 80px;
             display: flex;
             flex-direction: column;
-            gap: 2px; /* 항목 간 간격 축소 */
+            gap: 2px;
+            /* 항목 간 간격 축소 */
         }
 
         .calendar-header-day {
             background-color: #1e293b;
-            padding: 4px; /* 헤더 여백도 같이 축소 */
+            padding: 4px;
+            /* 헤더 여백도 같이 축소 */
             text-align: center;
             font-weight: bold;
             color: #94a3b8;
@@ -131,16 +134,20 @@
         }
 
         .calendar-stat-item {
-            font-size: clamp(9px, 2.5vw, 12px); /* 모바일에서는 폰트를 작게, 큰 화면은 12px 유지 */
-            padding: 2px 4px; /* 좌우 패딩을 대폭 줄여서 공간 확보 */
+            font-size: clamp(9px, 2.5vw, 12px);
+            /* 모바일에서는 폰트를 작게, 큰 화면은 12px 유지 */
+            padding: 2px 4px;
+            /* 좌우 패딩을 대폭 줄여서 공간 확보 */
             border-radius: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
             border: 1px solid rgba(255, 255, 255, 0.05);
-            white-space: nowrap; /* 줄바꿈 절대 방지 */
-            letter-spacing: -0.5px; /* 자간을 살짝 줄여서 한 줄에 잘 들어가게 조치 */
+            white-space: nowrap;
+            /* 줄바꿈 절대 방지 */
+            letter-spacing: -0.5px;
+            /* 자간을 살짝 줄여서 한 줄에 잘 들어가게 조치 */
         }
 
         .calendar-stat-teacher-attended {
@@ -171,6 +178,11 @@
         .calendar-stat-trainee-unconfirmed {
             background-color: rgba(156, 163, 175, 0.15);
             color: #d1d5db;
+        }
+
+        .calendar-stat-trainee-vacation {
+            background-color: rgba(14, 165, 233, 0.15);
+            color: #7dd3fc;
         }
 
         .calendar-stat-schedule-completed {
@@ -516,6 +528,7 @@
                             <option value="전체">전체</option>
                             <option value="출석">출석</option>
                             <option value="결석">결석</option>
+                            <option value="휴가">휴가</option>
                             <option value="미확인">미확인</option>
                         </select>
                     </div>
@@ -608,7 +621,7 @@
 
     <script>
         // 1. Globals & Setup
-        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhBeZLvIH9Nj9FwcFzF_9mdV0SXYfCxgQvdguSw-iUSWHu3UKNbgg5ShgvTTJ5Krnf3Q/exec";
+        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygg7-Mb-KGXZIU-mzRgi1Ad-i6cBixdQ_oqgWEBpss_e3cexGy07YtgRQsIq6FMBepaQ/exec";
         let globalSummaryData = [];
         let globalFilteredSummaryData = [];
         let allData = [];
@@ -696,19 +709,17 @@
         }
 
         const isExcludedCondition = (item, name = '') => {
-            const kws = ['대상자발굴', '수업준비', '복지관이동', '복지관으로이동', '이동시간', '자체학습', '선생님휴가', '휴가'];
+            const kws = ['대상자발굴', '수업준비', '복지관이동', '복지관으로이동', '이동시간', '자체학습'];
             const targetStr = (item.target || '').replace(/\s+/g, '');
             const statusStr = (item.status || '').replace(/\s+/g, '');
             const nameStr = (name || '').replace(/\s+/g, '');
             const locationStr = (item.location || '').replace(/\s+/g, '');
-            
-            // 기존 제외 키워드 체크
+
             if (kws.some(kw => targetStr.includes(kw) || statusStr.includes(kw) || nameStr.includes(kw))) return true;
-            
-            // 새 제외 조건: 학생이름에 '간담회' 또는 장소에 '소양교육' 포함
+
             if (targetStr.includes('간담회') || nameStr.includes('간담회')) return true;
             if (locationStr.includes('소양교육')) return true;
-            
+
             return false;
         };
 
@@ -722,7 +733,7 @@
 
             // 달력 모달의 경우 스마트폰 가로 너비를 98%까지 꽉 채우도록 설정 (w-[98%])
             if (category === 'calendar') {
-                container.classList.add('w-[98%]', 'max-w-[1200px]'); 
+                container.classList.add('w-[98%]', 'max-w-[1200px]');
             } else {
                 container.classList.add('w-[98%]', 'max-w-[1800px]');
             }
@@ -790,20 +801,20 @@
             textInput.addEventListener('blur', () => {
                 const rawVal = textInput.value.replace(/\([^)]+\)/g, '').trim();
                 let mm, dd;
-                
+
                 const parts = rawVal.split(/[^0-9]+/);
                 if (parts.length >= 2 && parts[0] && parts[1]) {
                     mm = parseInt(parts[0], 10);
                     dd = parseInt(parts[1], 10);
                 } else {
                     const textVal = rawVal.replace(/[^0-9]/g, '');
-                    if (textVal.length === 3) { 
-                        mm = parseInt(textVal.substring(0, 1), 10); 
-                        dd = parseInt(textVal.substring(1), 10); 
+                    if (textVal.length === 3) {
+                        mm = parseInt(textVal.substring(0, 1), 10);
+                        dd = parseInt(textVal.substring(1), 10);
                     }
-                    else if (textVal.length === 4) { 
-                        mm = parseInt(textVal.substring(0, 2), 10); 
-                        dd = parseInt(textVal.substring(2), 10); 
+                    else if (textVal.length === 4) {
+                        mm = parseInt(textVal.substring(0, 2), 10);
+                        dd = parseInt(textVal.substring(2), 10);
                     }
                 }
 
@@ -931,7 +942,7 @@
                         dateObj: dateMap[j],
                         teacherAttended: getVal('출근한선생님수', j), teacherVacation: getVal('휴가인선생님', j),
                         traineeAttended: getVal('출석자수', j), traineeAbsent: getVal('결석자수', j),
-                        traineeCancel: getVal('취소자수', j), traineeUnconfirmed: getVal('미확인자수', j),
+                        traineeCancel: getVal('취소자수', j), traineeVacation: getVal('휴가자수', j), traineeUnconfirmed: getVal('미확인자수', j),
                         scheduleCompleted: getVal('완료된수', j), scheduleUnconfirmed: getVal('미확인된수', j),
                         session15plus: getVal('15회이상', j), session8to14: getVal('8~14회', j), session7minus: getVal('7회이하', j)
                     });
@@ -954,7 +965,7 @@
             const holidayRow2 = data[headerRowIndex + 2] || [];
             for (let j = 4; j < headerRow.length; j++) {
                 if (headerRow[j] && headerRow[j].trim() !== '') {
-                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) || 
+                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) ||
                         (holidayRow2[j] && String(holidayRow2[j]).includes('공휴일'))) {
                         continue;
                     }
@@ -1134,7 +1145,26 @@
             const validScheduleGroups = { '전체': [] };
             const sessionMap = new Map();
 
+            // 💡 선생님 상태를 먼저 파악함
             dailyData.forEach(item => {
+                const cleanTeacher = item.name.replace(/\s+/g, '');
+                if (cleanTeacher !== '천은선서승희') {
+                    if (!teacherStatusMap.has(item.name)) {
+                        let rStat = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                        let isVac = rStat.replace(/\s+/g, '').includes('선생님휴가') || isMandatoryDay;
+                        teacherStatusMap.set(item.name, { item: item, status: isVac ? '휴가' : '출근' });
+                    }
+                    let tData = teacherStatusMap.get(item.name);
+                    let rStat = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                    const checkStr = rStat.replace(/\s+/g, '');
+                    if (checkStr.includes('선생님휴가') || checkStr.includes('선생님 휴가')) tData.status = '휴가';
+                }
+            });
+
+            dailyData.forEach(item => {
+                const tData = teacherStatusMap.get(item.name);
+                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
+
                 let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
                 let isPartial = false;
                 if (rawStatus) {
@@ -1144,84 +1174,101 @@
                     if ((checkStr.includes('결석') || checkStr.includes('취소')) && extC >= 1) isPartial = true;
                 }
                 item.isPartial = isPartial;
-                const cleanTeacher = item.name.replace(/\s+/g, '');
-                if (cleanTeacher !== '천은선서승희') {
-                    if (!teacherStatusMap.has(item.name)) {
-                        // 의무 출석일이면 기본 상태를 '출근_확정'으로 설정 (수업 없어도 출근)
-                        teacherStatusMap.set(item.name, { item: item, status: isMandatoryDay ? '출근_확정' : '출근' });
-                    }
-                    let tData = teacherStatusMap.get(item.name);
-                    if (rawStatus) {
-                        const checkStr = rawStatus.replace(/\s+/g, '');
-                        if (checkStr.includes('선생님휴가')) {
-                            tData.status = '휴가'; // 휴가는 가장 높은 우선순위
-                        } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
-                            tData.status = '출근_확정';
-                        }
-                    }
-                }
 
                 const targetText = (item.target || "").trim();
                 const isEmptyTarget = (!targetText || targetText === '-');
                 let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
                 let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+
+                if (targetText.includes('보조강사') || targetText.includes('경로당')) {
+                    const matchNum = (item.status || '').match(/\d+/);
+                    if (matchNum) {
+                        const val = parseInt(matchNum[0], 10);
+                        if (val > stat_sCount) stat_sCount = val;
+                    }
+                }
+
                 if (isEmptyTarget) stat_sCount = 0;
-                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sUnconfirmed = 0;
+                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sVacation = 0, stat_sUnconfirmed = 0;
                 let stat_pStr = rawStatus ? rawStatus.trim() : "";
                 let cleanTargetStr = targetText.replace(/\s+/g, '');
                 let cleanLocationStr = (item.location || '').replace(/\s+/g, '');
-                let isExcludedTextOnly = ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴', '선생님휴가', '휴가'].some(kw => stat_pStr.replace(/\s+/g, '').includes(kw));
+                let isExcludedTextOnly = ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴'].some(kw => stat_pStr.replace(/\s+/g, '').includes(kw));
                 if (cleanTargetStr.includes('자체학습') || cleanTargetStr.includes('대상자발굴')) isExcludedTextOnly = true;
                 if (cleanTargetStr.includes('간담회') || cleanLocationStr.includes('소양교육')) isExcludedTextOnly = true;
 
                 if (stat_sCount > 0) {
-                    if (stat_pStr === "" && !isExcludedTextOnly) { 
-                        stat_sUnconfirmed = stat_sCount; 
-                    } else if (isExcludedTextOnly) { 
-                        stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0; 
+                    if (stat_pStr === "" && !isExcludedTextOnly) {
+                        if (item.isTeacherVacation) stat_sVacation = stat_sCount;
+                        else stat_sUnconfirmed = stat_sCount;
+                    } else if (isExcludedTextOnly) {
+                        stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sVacation = 0; stat_sUnconfirmed = 0;
                     } else {
-                        // 슬래시를 포함한 경우 분리하여 각각 판단 (요청사항 반영)
-                        if (stat_pStr.includes('/')) {
-                            stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
-                            const parts = stat_pStr.split('/').map(p => p.trim());
-                            parts.forEach(part => {
-                                if (part.includes("결석")) stat_sAbsent++;
-                                else if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
-                                else if (/\d/.test(part)) stat_sAttend++;
-                                else if (part !== "") stat_sUnconfirmed++;
+                        const tagPart = stat_pStr.split(',')[0].trim();
+                        if (tagPart.includes('/') && stat_sCount >= 2) {
+                            const parts = tagPart.split('/');
+                            parts.forEach(p => {
+                                if (p.includes("취소")) stat_sCancel++;
+                                else if (p.includes("휴가")) stat_sVacation++;
+                                else if (p.includes("결석")) stat_sAbsent++;
+                                else {
+                                    const match = p.match(/\d+/);
+                                    if (match && parseInt(match[0], 10) > 0) stat_sAttend++;
+                                }
                             });
-                            // 합산된 수가 대상자 수보다 적을 경우, 나머지를 미확인으로 간주
-                            let totalParsed = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sUnconfirmed;
-                            if (totalParsed < stat_sCount) {
-                                stat_sUnconfirmed += (stat_sCount - totalParsed);
+                            let parsedTotal = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sVacation;
+                            if (parsedTotal < stat_sCount) {
+                                stat_sUnconfirmed = stat_sCount - parsedTotal;
+                            } else if (parsedTotal > stat_sCount) {
+                                let over = parsedTotal - stat_sCount;
+                                if (stat_sAttend >= over) stat_sAttend -= over;
                             }
                         } else {
                             const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
-                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length; let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
+                            let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+                            let countVacationStr = (stat_pStr.match(/휴가/g) || []).length;
+
                             if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
                                 if (stat_sCount === 1) {
-                                    stat_sCancel = 1; stat_sAbsent = 0; stat_sAttend = 0;
+                                    stat_sAbsent = 1; stat_sCancel = 1; stat_sAttend = 0;
                                 } else {
-                                    stat_sCancel = Math.min(stat_sCount, countCancelStr);
-                                    stat_sAbsent = Math.min(stat_sCount - stat_sCancel, countAbsentStr);
+                                    stat_sAbsent = Math.min(stat_sCount, countAbsentStr);
+                                    stat_sCancel = Math.min(stat_sCount - stat_sAbsent, countCancelStr);
                                     stat_sAttend = Math.max(0, stat_sCount - stat_sCancel - stat_sAbsent);
                                 }
                             } else if (stat_pStr.startsWith("취소")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
                                 stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
+                            } else if (countAbsentStr > 0 && countVacationStr > 0 && stat_sCount >= 2) {
+                                stat_sAbsent = countAbsentStr; stat_sVacation = countVacationStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sVacation);
                             } else if (stat_pStr.includes("결석")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
+                            } else if (stat_pStr.includes("휴가")) {
+                                if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sVacation = stat_sCount === 1 ? 1 : stat_sCount - 1; }
+                                else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sVacation = stat_sCount - firstNum; } else { stat_sVacation = stat_sCount; }
                             } else if (stat_pStr.includes("취소")) {
-                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                                if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sCancel = stat_sCount === 1 ? 1 : stat_sCount - 1; }
+                                else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else {
                                 if (match) stat_sAttend = firstNum; else stat_sAttend = stat_sCount;
                             }
                         }
                     }
+                    let parsedTotal = stat_sAttend + stat_sAbsent + stat_sVacation + stat_sUnconfirmed;
+                    if (parsedTotal > stat_sCount) {
+                        let rem = stat_sCount;
+                        let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
+                        let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
+                        let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
+                        let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
+                        stat_sAbsent = fAbs; stat_sVacation = fVac; stat_sAttend = fAtt; stat_sUnconfirmed = fUnc;
+                    }
+                    stat_sCancel = Math.min(stat_sCancel, stat_sCount);
                 }
 
-                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statUnconfirmed = stat_sUnconfirmed;
+                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statVacation = stat_sVacation; item.statUnconfirmed = stat_sUnconfirmed;
                 validScheduleGroups['전체'].push(item);
 
                 let validScheduleNamesArray = [];
@@ -1289,20 +1336,21 @@
             };
 
             const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
-            let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalUnconfirmed = 0;
+            let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalVacation = 0, totalUnconfirmed = 0;
             graphSchedulesAll.forEach(item => {
                 totalAttend += item.statAttend || 0;
                 totalAbsent += item.statAbsent || 0;
                 totalCancel += item.statCancel || 0;
+                totalVacation += item.statVacation || 0;
                 totalUnconfirmed += item.statUnconfirmed || 0;
             });
-            let totalTrainees = totalAttend + totalAbsent + totalUnconfirmed;
-            let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0).length;
+            let totalTrainees = totalAttend + totalAbsent + totalCancel + totalVacation + totalUnconfirmed;
+            let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0 && (it.statVacation || 0) === 0).length;
             let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
 
             return {
                 dailyData, teacherGroups, validScheduleGroups, sessionGroups,
-                totalTrainees, totalAttend, totalAbsent, totalCancel, totalUnconfirmed,
+                totalTrainees, totalAttend, totalAbsent, totalCancel, totalVacation, totalUnconfirmed,
                 graphSchedulesAll, schedCompletedCount, schedUnconfCount, filterScheduleForGraph
             };
         }
@@ -1331,8 +1379,13 @@
                     stats: [
                         dStats.teacherGroups['출근'] ? dStats.teacherGroups['출근'].length : 0,
                         dStats.teacherGroups['휴가'] ? dStats.teacherGroups['휴가'].length : 0,
-                        dStats.totalAttend || 0, dStats.totalAbsent || 0, dStats.totalCancel || 0, dStats.totalUnconfirmed || 0,
-                        dStats.schedCompletedCount || 0, dStats.schedUnconfCount || 0,
+                        dStats.totalAttend || 0,
+                        dStats.totalAbsent || 0,
+                        dStats.totalCancel || 0,
+                        dStats.totalVacation || 0, // 💡 Index 5 -> Row 7 (휴가자 수)
+                        dStats.totalUnconfirmed || 0,
+                        dStats.schedCompletedCount || 0,
+                        dStats.schedUnconfCount || 0,
                         dStats.sessionGroups['15회 이상'] ? dStats.sessionGroups['15회 이상'].length : 0,
                         dStats.sessionGroups['8~14회'] ? dStats.sessionGroups['8~14회'].length : 0,
                         dStats.sessionGroups['7회 이하'] ? dStats.sessionGroups['7회 이하'].length : 0
@@ -1353,11 +1406,21 @@
         async function loadDataFromGoogleSheets(urls, isSilent = false) {
             if (isFetching) return;
             isFetching = true;
+            console.log("🚀 데이터 로딩 시작", urls);
 
             const syncPopup = document.getElementById('syncPopup');
             const globalLoader = document.getElementById('globalLoader');
             const syncIndicator = document.getElementById('syncIndicator');
             const loaderText = document.querySelector('#globalLoader .text-2xl');
+
+            // 💡 안전 장치: 어떤 경우에도 30초 후에는 로더를 닫음
+            const safetyTimeout = setTimeout(() => {
+                if (globalLoader && !globalLoader.classList.contains('hidden')) {
+                    globalLoader.classList.add('hidden');
+                    isFetching = false;
+                    console.warn("⚠️ 로딩 안전 타임아웃 작동 (30초)");
+                }
+            }, 30000);
 
             if (isSilent) {
                 if (syncIndicator) syncIndicator.style.opacity = "1";
@@ -1369,57 +1432,77 @@
                 }
             }
 
-            allData = []; globalSummaryData = []; const teamNames = ["1팀", "2팀", "3팀"];
-            const parsedResults = new Array(urls.length);
+            try {
+                allData = []; globalSummaryData = []; const teamNames = ["1팀", "2팀", "3팀"];
+                const parsedResults = new Array(urls.length);
 
-            const fetchPromises = urls.map(async (url, i) => {
-                const csvUrl = getCsvUrl(url);
-                if (!csvUrl) return;
-                try {
-                    const res = await fetch(csvUrl);
-                    if (res.ok) parsedResults[i] = await res.text();
-                } catch (e) { window.showToast(`${teamNames[i]} 데이터를 불러올 수 없습니다.`, true); }
-            });
-
-            await Promise.all(fetchPromises);
-            let hasData = false;
-            parsedResults.forEach((text, i) => { if (text) { processCSVText(text, teamNames[i]); hasData = true; } });
-
-            if (hasData) {
-                if (!isSilent && loaderText) loaderText.textContent = "요약 데이터를 생성하여 구글 시트에 기록 중입니다...";
-                await calculateAndSendStatistics();
-                if (!isSilent && loaderText) loaderText.textContent = "기록된 요약 데이터를 동기화 중입니다...";
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                const summaryUrlInput = document.getElementById('summaryUrl').value;
-                const summaryCsvUrl = getCsvUrl(summaryUrlInput);
-                if (summaryCsvUrl) {
+                const fetchPromises = urls.map(async (url, i) => {
+                    const csvUrl = getCsvUrl(url);
+                    if (!csvUrl) return;
                     try {
-                        const summaryRes = await fetch(summaryCsvUrl + `&timestamp=${Date.now()}`);
-                        if (summaryRes.ok) processSummaryCSV(await summaryRes.text());
-                    } catch (e) { }
+                        const res = await fetch(csvUrl);
+                        if (res.ok) parsedResults[i] = await res.text();
+                    } catch (e) { window.showToast(`${teamNames[i]} 데이터를 불러올 수 없습니다.`, true); }
+                });
+
+                await Promise.all(fetchPromises);
+                let hasData = false;
+                parsedResults.forEach((text, i) => { if (text) { processCSVText(text, teamNames[i]); hasData = true; } });
+
+                if (hasData) {
+                    if (!isSilent && loaderText) loaderText.textContent = "요약 데이터를 생성하여 구글 시트에 기록 중입니다...";
+                    console.log("📊 통계 계산 및 전송 중...");
+                    await calculateAndSendStatistics();
+
+                    if (!isSilent && loaderText) loaderText.textContent = "기록된 요약 데이터를 동기화 중입니다...";
+                    console.log("🔄 요약 데이터 재동기화 중...");
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+
+                    const summaryUrlInput = document.getElementById('summaryUrl').value;
+                    const summaryCsvUrl = getCsvUrl(summaryUrlInput);
+                    if (summaryCsvUrl) {
+                        try {
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 10000);
+                            const summaryRes = await fetch(summaryCsvUrl + `&timestamp=${Date.now()}`, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+                            if (summaryRes.ok) processSummaryCSV(await summaryRes.text());
+                            console.log("✅ 요약 데이터 동기화 완료");
+                        } catch (e) { console.warn("⚠️ 요약 데이터 동기화 실패 또는 타임아웃", e); }
+                    }
                 }
-            }
 
-            if (!isDatesInitialized && hasData) { initializeDates(); isDatesInitialized = true; }
+                if (!isDatesInitialized && hasData) { initializeDates(); isDatesInitialized = true; }
 
-            if (allData.length === 0 && globalSummaryData.length === 0) {
-                setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden');
-                document.getElementById('periodNavigation').classList.add('hidden');
-            } else {
-                setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
-                document.getElementById('periodNavigation').classList.remove('hidden');
-                renderDashboard();
-            }
-
-            isFetching = false;
-            if (isSilent) {
-                setTimeout(() => {
-                    if (syncIndicator) syncIndicator.style.opacity = "0";
-                    if (syncPopup) { syncPopup.classList.add('hidden'); syncPopup.classList.remove('flex'); }
-                }, 500);
-            } else {
-                if (globalLoader) { globalLoader.classList.add('hidden'); globalLoader.classList.remove('flex'); }
+                if (allData.length === 0 && globalSummaryData.length === 0) {
+                    setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden');
+                    document.getElementById('periodNavigation').classList.add('hidden');
+                } else {
+                    setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
+                    document.getElementById('periodNavigation').classList.remove('hidden');
+                    console.log("🎨 대시보드 렌더링 시작");
+                    try {
+                        renderDashboard();
+                    } catch (renderError) {
+                        console.error("❌ renderDashboard 오류:", renderError);
+                        window.showToast("대시보드 화면 생성 중 오류가 발생했습니다.", true);
+                    }
+                }
+            } catch (error) {
+                console.error("데이터 로딩 중 오류 발생:", error);
+                window.showToast("데이터를 불러오는 중 오류가 발생했습니다.", true);
+            } finally {
+                clearTimeout(safetyTimeout);
+                isFetching = false;
+                console.log("🔚 데이터 로딩 프로세스 종료");
+                if (isSilent) {
+                    setTimeout(() => {
+                        if (syncIndicator) syncIndicator.style.opacity = "0";
+                        if (syncPopup) { syncPopup.classList.add('hidden'); syncPopup.classList.remove('flex'); }
+                    }, 500);
+                } else {
+                    if (globalLoader) { globalLoader.classList.add('hidden'); globalLoader.classList.remove('flex'); }
+                }
             }
         }
 
@@ -1616,7 +1699,7 @@
                 const tKey = `${item.date}|${item.team}|${item.group}|${item.name}`;
                 if (!teacherVisibilityMap.has(tKey)) teacherVisibilityMap.set(tKey, false);
                 const tText = (item.target || "").trim(); const sText = (item.status || "").replace(/\s+/g, '');
-                
+
                 if (mandatoryDates.has(item.date)) {
                     // 의무 출석일에는 모든 선생님이 보여야 함
                     teacherVisibilityMap.set(tKey, true);
@@ -1640,10 +1723,33 @@
             const teacherStatusMap = new Map();
             const groupTargetSet = new Set();
             const scheduleSet = new Set();
-            const traineeGroups = { '전체': [], '출석': [], '미확인': [], '결석': [], '취소': [] };
+            const traineeGroups = { '전체': [], '출석': [], '미확인': [], '결석': [], '취소': [], '휴가': [] };
             const validScheduleGroups = { '전체': [] };
             const sessionGroups = { '전체': [], '7회 이하': [], '8~14회': [], '15회 이상': [] };
             const sessionMap = new Map();
+
+            // 💡 [실행 순서 변경] 통계 계산 전 선생님 상태를 먼저 파악하여 '선생님 휴가' 정보를 미리 확보함
+            periodData.forEach(item => {
+                const cleanTeacher = item.name.replace(/\s+/g, '');
+                if (cleanTeacher !== '천은선서승희') {
+                    const teacherKey = `${item.date}|${item.name}`;
+                    if (!teacherStatusMap.has(teacherKey)) {
+                        let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                        let isVac = rawStatus.replace(/\s+/g, '').includes('선생님휴가') || mandatoryDates.has(item.date);
+                        teacherStatusMap.set(teacherKey, { item: item, status: isVac ? '휴가' : '출근' });
+                    }
+                    let tData = teacherStatusMap.get(teacherKey);
+                    let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
+                    if (rawStatus.replace(/\s+/g, '').includes('선생님휴가')) tData.status = '휴가';
+                }
+            });
+
+            // 모든 데이터에 선생님 휴가 여부 플래그 선제적 설정
+            periodData.forEach(item => {
+                const teacherKey = `${item.date}|${item.name}`;
+                const tData = teacherStatusMap.get(teacherKey);
+                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
+            });
 
             periodData.forEach(item => {
                 let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
@@ -1654,69 +1760,92 @@
                 }
                 item.isPartial = isPartial;
 
-                const cleanTeacher = item.name.replace(/\s+/g, '');
-                if (cleanTeacher !== '천은선서승희') {
-                    const teacherKey = `${item.date}|${item.name}`;
-                    if (!teacherStatusMap.has(teacherKey)) {
-                        // 의무 출석일이면 기본 상태를 '출근_확정'으로 설정
-                        teacherStatusMap.set(teacherKey, { item: item, status: mandatoryDates.has(item.date) ? '출근_확정' : '출근' });
-                    }
-                    let tData = teacherStatusMap.get(teacherKey);
-                    if (rawStatus) {
-                        const checkStr = rawStatus.replace(/\s+/g, '');
-                        if (checkStr.includes('선생님휴가')) {
-                            tData.status = '휴가'; // 휴가는 가장 높은 우선순위
-                        } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
-                            tData.status = '출근_확정';
-                        }
-                    }
-                }
-
                 const targetText = (item.target || "").trim();
                 const isEmptyTarget = (!targetText || targetText === '-');
                 let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
                 let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+
+                if (targetText.includes('보조강사') || targetText.includes('경로당')) {
+                    const matchNum = (item.status || '').match(/\d+/);
+                    if (matchNum) {
+                        const val = parseInt(matchNum[0], 10);
+                        if (val > stat_sCount) stat_sCount = val;
+                    }
+                }
+
                 if (isEmptyTarget) stat_sCount = 0;
-                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sUnconfirmed = 0;
+                let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sVacation = 0, stat_sUnconfirmed = 0;
                 let stat_pStr = rawStatus ? rawStatus.trim() : "";
 
                 if (stat_sCount > 0) {
-                    if (stat_pStr === "") { 
-                        stat_sUnconfirmed = stat_sCount; 
+                    if (stat_pStr === "") {
+                        if (item.isTeacherVacation) stat_sVacation = stat_sCount;
+                        else stat_sUnconfirmed = stat_sCount;
                     } else {
-                        // 슬래시를 포함한 경우 분리하여 각각 판단 (요청사항 반영)
-                        if (stat_pStr.includes('/')) {
-                            stat_sAttend = 0; stat_sAbsent = 0; stat_sCancel = 0; stat_sUnconfirmed = 0;
-                            const parts = stat_pStr.split('/').map(p => p.trim());
-                            parts.forEach(part => {
-                                if (part.includes("취소") || part.includes("휴가")) stat_sCancel++;
-                                else if (part.includes("결석")) stat_sAbsent++;
-                                else if (/\d/.test(part)) stat_sAttend++;
-                                else if (part !== "") stat_sUnconfirmed++;
+                        const tagPart = stat_pStr.split(',')[0].trim();
+                        if (tagPart.includes('/') && stat_sCount >= 2) {
+                            const parts = tagPart.split('/');
+                            parts.forEach(p => {
+                                if (p.includes("취소")) stat_sCancel++;
+                                else if (p.includes("휴가")) stat_sVacation++;
+                                else if (p.includes("결석")) stat_sAbsent++;
+                                else {
+                                    const match = p.match(/\d+/);
+                                    if (match && parseInt(match[0], 10) > 0) stat_sAttend++;
+                                }
                             });
-                            // 합산된 수가 대상자 수보다 적을 경우, 나머지를 미확인으로 간주
-                            let totalParsed = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sUnconfirmed;
-                            if (totalParsed < stat_sCount) {
-                                stat_sUnconfirmed += (stat_sCount - totalParsed);
+                            let parsedTotal = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sVacation;
+                            if (parsedTotal < stat_sCount) {
+                                stat_sUnconfirmed = stat_sCount - parsedTotal;
+                            } else if (parsedTotal > stat_sCount) {
+                                let over = parsedTotal - stat_sCount;
+                                if (stat_sAttend >= over) stat_sAttend -= over;
                             }
                         } else {
                             const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
-                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length; let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
-                            if (stat_pStr.startsWith("취소")) {
+                            let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
+                            let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
+                            let countVacationStr = (stat_pStr.match(/휴가/g) || []).length;
+
+                            if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
+                                if (stat_sCount === 1) {
+                                    stat_sAbsent = 1; stat_sCancel = 1; stat_sAttend = 0;
+                                } else {
+                                    stat_sAbsent = Math.min(stat_sCount, countAbsentStr);
+                                    stat_sCancel = Math.min(stat_sCount - stat_sAbsent, countCancelStr);
+                                    stat_sAttend = Math.max(0, stat_sCount - stat_sCancel - stat_sAbsent);
+                                }
+                            } else if (stat_pStr.startsWith("취소")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else if (countAbsentStr > 0 && countCancelStr > 0 && stat_sCount >= 2) {
                                 stat_sAbsent = countAbsentStr; stat_sCancel = countCancelStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sCancel);
+                            } else if (countAbsentStr > 0 && countVacationStr > 0 && stat_sCount >= 2) {
+                                stat_sAbsent = countAbsentStr; stat_sVacation = countVacationStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sVacation);
                             } else if (stat_pStr.includes("결석")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
+                            } else if (stat_pStr.includes("휴가")) {
+                                if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sVacation = stat_sCount === 1 ? 1 : stat_sCount - 1; }
+                                else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sVacation = stat_sCount - firstNum; } else { stat_sVacation = stat_sCount; }
                             } else if (stat_pStr.includes("취소")) {
-                                if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
+                                if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sCancel = stat_sCount === 1 ? 1 : stat_sCount - 1; }
+                                else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else {
                                 if (match) stat_sAttend = firstNum; else stat_sAttend = stat_sCount;
                             }
                         }
                     }
+                    let parsedTotal = stat_sAttend + stat_sAbsent + stat_sVacation + stat_sUnconfirmed;
+                    if (parsedTotal > stat_sCount) {
+                        let rem = stat_sCount;
+                        let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
+                        let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
+                        let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
+                        let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
+                        stat_sAbsent = fAbs; stat_sVacation = fVac; stat_sAttend = fAtt; stat_sUnconfirmed = fUnc;
+                    }
+                    stat_sCancel = Math.min(stat_sCancel, stat_sCount);
                 }
-                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statUnconfirmed = stat_sUnconfirmed;
+                item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statVacation = stat_sVacation; item.statUnconfirmed = stat_sUnconfirmed;
 
                 let validTraineeNamesArray = [];
                 if (!isEmptyTarget) {
@@ -1769,30 +1898,33 @@
 
                         traineeItem.calcCount = calcCount;
 
-                        // 슬래시(/) 포함 여부에 따른 개별 학생의 상태 판단 (출석, 결석, 취소, 미확인) - 요청사항 반영
+                        // 슬래시(/) 포함 여부에 따른 개별 학생의 상태 판단 (출석, 결석, 취소, 휴가, 미확인) - 요청사항 반영
                         let studentStatus = '미확인';
                         if (rawStatus.includes('/')) {
                             const nameIdx = validTraineeNamesArray.indexOf(name);
                             const parts = rawStatus.split('/').map(p => p.trim());
                             if (nameIdx !== -1 && nameIdx < parts.length) {
                                 const myStatus = parts[nameIdx];
-                                if (myStatus.includes('취소') || myStatus.includes('휴가')) studentStatus = '취소';
+                                if (myStatus.includes('취소')) studentStatus = '취소';
+                                else if (myStatus.includes('휴가')) studentStatus = '휴가';
                                 else if (myStatus.includes('결석')) studentStatus = '결석';
                                 else if (/\d/.test(myStatus)) studentStatus = '출석';
                                 else if (myStatus !== "") studentStatus = '미확인';
                             } else {
                                 if (stat_sAttend >= 1) studentStatus = '출석';
                                 else if (stat_sAbsent >= 1) studentStatus = '결석';
+                                else if (stat_sVacation >= 1) studentStatus = '휴가';
                                 else if (stat_sCancel >= 1) studentStatus = '취소';
                             }
                         } else {
                             if (stat_sAttend >= 1) studentStatus = '출석';
-                            else if (stat_sAbsent >= 1 && stat_sAttend === 0) studentStatus = '결석';
-                            else if (stat_sCancel >= 1 && stat_sAttend === 0 && stat_sAbsent === 0) studentStatus = '취소';
+                            else if (stat_sVacation >= 1 && stat_sAttend === 0) studentStatus = '휴가';
+                            else if (stat_sAbsent >= 1 && stat_sAttend === 0 && stat_sVacation === 0) studentStatus = '결석';
+                            else if (stat_sCancel >= 1 && stat_sAttend === 0 && stat_sVacation === 0 && stat_sAbsent === 0) studentStatus = '취소';
                         }
 
                         traineeGroups['전체'].push(traineeItem);
-                        if(traineeGroups[studentStatus]) {
+                        if (traineeGroups[studentStatus]) {
                             traineeGroups[studentStatus].push(traineeItem);
                         } else {
                             traineeGroups['미확인'].push(traineeItem);
@@ -1814,21 +1946,21 @@
             });
             window.currentPeriodSessionGroups = sessionGroups;
 
+            // 선생님 상태 맵핑 기반 데이터 그룹화 완료
             const teacherGroups = { '전체': [], '출근': [], '휴가': [] };
-            teacherStatusMap.forEach((tData) => {
-                teacherGroups['전체'].push(tData.item); teacherGroups[finalStatus].push(tData.item);
-            });
-
-            // 모든 일정 및 교육대상자 데이터에 선생님 휴가 여부 플래그 설정
-            validScheduleGroups['전체'].forEach(item => {
-                const tKey = `${item.date}|${item.name}`;
-                const tData = teacherStatusMap.get(tKey);
-                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
-            });
-            traineeGroups['전체'].forEach(item => {
-                const tKey = `${item.date}|${item.name}`;
-                const tData = teacherStatusMap.get(tKey);
-                if (tData && tData.status === '휴가') item.isTeacherVacation = true;
+            const uniqueTeacherNames = new Set();
+            periodData.forEach(item => {
+                const teacherKey = `${item.date}|${item.name}`;
+                if (!uniqueTeacherNames.has(teacherKey)) {
+                    uniqueTeacherNames.add(teacherKey);
+                    const tData = teacherStatusMap.get(teacherKey);
+                    if (tData) {
+                        const finalStatus = tData.status === '휴가' ? '휴가' : '출근';
+                        tData.item.teacherFinalStatus = finalStatus;
+                        teacherGroups['전체'].push(tData.item);
+                        teacherGroups[finalStatus].push(tData.item);
+                    }
+                }
             });
 
             const filterTraineeForGraph = (item) => { if (isExcludedCondition(item, item.splitName) || item.isConsecutiveAssistant) return false; return true; };
@@ -1843,23 +1975,29 @@
             const graphSchedulesAll = validScheduleGroups['전체'].filter(filterScheduleForGraph);
             const sumTraineeCount = (arr) => arr.reduce((sum, item) => sum + (item.calcCount || 0), 0);
 
+            // 💡 상세 데이터에서 집계된 휴가 인원 계산
+            const detailedVacationCount = sumTraineeCount(traineeGroups['휴가']);
+
             document.getElementById('kpiSession').textContent = sumTraineeCount(sessionGroups['전체']);
             globalFilteredSummaryData = globalSummaryData.filter(item => item.dateObj >= startD && item.dateObj <= endD);
 
             if (globalFilteredSummaryData && globalFilteredSummaryData.length > 0) {
-                let sumTeacherAttended = 0, sumTeacherVacation = 0, sumTraineeAttended = 0, sumTraineeAbsent = 0, sumTraineeCancel = 0, sumTraineeUnconfirmed = 0, sumScheduleCompleted = 0, sumScheduleUnconfirmed = 0;
+                let sumTeacherAttended = 0, sumTeacherVacation = 0, sumTraineeAttended = 0, sumTraineeAbsent = 0, sumTraineeCancel = 0, sumTraineeVacation = 0, sumTraineeUnconfirmed = 0, sumScheduleCompleted = 0, sumScheduleUnconfirmed = 0;
 
                 globalFilteredSummaryData.forEach(item => {
                     sumTeacherAttended += item.teacherAttended; sumTeacherVacation += item.teacherVacation;
                     sumTraineeAttended += item.traineeAttended; sumTraineeAbsent += item.traineeAbsent;
-                    sumTraineeCancel += item.traineeCancel; sumTraineeUnconfirmed += item.traineeUnconfirmed;
+                    sumTraineeCancel += item.traineeCancel; sumTraineeVacation += (item.traineeVacation || 0); sumTraineeUnconfirmed += item.traineeUnconfirmed;
                     sumScheduleCompleted += item.scheduleCompleted; sumScheduleUnconfirmed += item.scheduleUnconfirmed;
                 });
 
                 const totalTeacher = sumTeacherAttended + sumTeacherVacation;
                 document.getElementById('kpiTeacher').textContent = totalTeacher > 0 ? sumTeacherAttended : "-";
 
-                const totalTraineesSum = sumTraineeAttended + sumTraineeAbsent + sumTraineeUnconfirmed;
+                // 💡 상세 데이터에서 집계된 휴가 인원이 더 많으면 보정 (요약 데이터 누락 방지)
+                if (sumTraineeVacation < detailedVacationCount) sumTraineeVacation = detailedVacationCount;
+
+                const totalTraineesSum = sumTraineeAttended + sumTraineeAbsent + sumTraineeCancel + sumTraineeVacation + sumTraineeUnconfirmed;
                 document.getElementById('kpiTrainee').textContent = totalTraineesSum > 0 ? totalTraineesSum : "-";
 
                 const totalSchedules = sumScheduleCompleted + sumScheduleUnconfirmed;
@@ -1873,6 +2011,7 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTraineesSum, '명', [
                     { label: '출석', count: sumTraineeAttended, color: '#3b82f6' },
                     { label: '결석', count: sumTraineeAbsent, color: '#ef4444' },
+                    { label: '휴가', count: sumTraineeVacation, color: '#0ea5e9' },
                     { label: '미확인', count: sumTraineeUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
 
@@ -1881,12 +2020,12 @@
                     { label: '미확인', count: sumScheduleUnconfirmed, color: '#9ca3af' }
                 ], 'schedule');
             } else {
-                let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalUnconfirmed = 0;
+                let totalAttend = 0, totalAbsent = 0, totalCancel = 0, totalVacation = 0, totalUnconfirmed = 0;
                 graphSchedulesAll.forEach(item => {
                     totalAttend += item.statAttend || 0; totalAbsent += item.statAbsent || 0;
-                    totalCancel += item.statCancel || 0; totalUnconfirmed += item.statUnconfirmed || 0;
+                    totalCancel += item.statCancel || 0; totalVacation += item.statVacation || 0; totalUnconfirmed += item.statUnconfirmed || 0;
                 });
-                let totalTrainees = totalAttend + totalAbsent + totalUnconfirmed;
+                let totalTrainees = totalAttend + totalAbsent + totalVacation + totalUnconfirmed;
 
                 document.getElementById('kpiTeacher').textContent = teacherGroups['출근'].length;
                 document.getElementById('kpiTrainee').textContent = totalTrainees;
@@ -1900,10 +2039,11 @@
                 document.getElementById('gaugeTrainee').innerHTML = createGaugeHTML('출석률', totalTrainees, '명', [
                     { label: '출석', count: totalAttend, color: '#3b82f6' },
                     { label: '결석', count: totalAbsent, color: '#ef4444' },
+                    { label: '휴가', count: totalVacation, color: '#0ea5e9' },
                     { label: '미확인', count: totalUnconfirmed, color: '#9ca3af' }
                 ], 'trainee');
 
-                let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0).length;
+                let schedUnconfCount = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0 && (it.statVacation || 0) === 0).length;
                 let schedCompletedCount = graphSchedulesAll.length - schedUnconfCount;
 
                 document.getElementById('gaugeSchedule').innerHTML = createGaugeHTML('완료율', graphSchedulesAll.length, '건', [
@@ -1933,7 +2073,12 @@
                 prevFriday.setDate(prevFriday.getDate() - daysToFriday);
                 if (trendEndD > prevFriday) trendEndD = prevFriday;
             }
-            while (curr <= trendEndD) { weeklyDataMap.set(getWeekLabel(curr), 0); curr.setDate(curr.getDate() + 7); }
+            let safetyLoopCounter = 0;
+            while (curr <= trendEndD && safetyLoopCounter < 100) {
+                weeklyDataMap.set(getWeekLabel(curr), 0);
+                curr.setDate(curr.getDate() + 7);
+                safetyLoopCounter++;
+            }
             const endWeekLabel = getWeekLabel(trendEndD);
             if (!weeklyDataMap.has(endWeekLabel)) weeklyDataMap.set(endWeekLabel, 0);
 
@@ -1941,7 +2086,7 @@
             let scheduleUnconfirmedItems = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0);
 
             globalDataTeacher = { '전체': teacherGroups['전체'], '출근': teacherGroups['출근'], '휴가': teacherGroups['휴가'] };
-            globalDataTrainee = { '전체': graphSchedulesAll, '출석': graphSchedulesAll.filter(i => i.statAttend >= 1), '결석': graphSchedulesAll.filter(i => i.statAbsent >= 1), '취소': graphSchedulesAll.filter(i => i.statCancel >= 1), '미확인': graphSchedulesAll.filter(i => i.statUnconfirmed >= 1) };
+            globalDataTrainee = { '전체': graphSchedulesAll, '출석': graphSchedulesAll.filter(i => i.statAttend >= 1), '결석': graphSchedulesAll.filter(i => i.statAbsent >= 1), '취소': graphSchedulesAll.filter(i => i.statCancel >= 1), '휴가': graphSchedulesAll.filter(i => i.statVacation >= 1), '미확인': graphSchedulesAll.filter(i => i.statUnconfirmed >= 1) };
             globalDataSchedule = { '전체': graphSchedulesAll, '완료': scheduleCompletedItems, '미확인': scheduleUnconfirmedItems };
             globalDataSession = graphTraineesAll;
             globalWeeklyLabels = Array.from(weeklyDataMap.keys());
@@ -1969,8 +2114,9 @@
                             if (countType === 'attend') addVal = item.statAttend || 0;
                             else if (countType === 'absent') addVal = item.statAbsent || 0;
                             else if (countType === 'cancel') addVal = item.statCancel || 0;
+                            else if (countType === 'vacation') addVal = item.statVacation || 0;
                             else if (countType === 'unconfirmed') addVal = item.statUnconfirmed || 0;
-                            else if (countType === 'allStats') addVal = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statUnconfirmed || 0);
+                            else if (countType === 'allStats') addVal = (item.statAttend || 0) + (item.statAbsent || 0) + (item.statVacation || 0) + (item.statUnconfirmed || 0);
                             tempMap.set(w, tempMap.get(w) + addVal);
                         }
                     }
@@ -2058,6 +2204,7 @@
                         if (selTrainee === '전체') trAdd = item.traineeAttended + item.traineeAbsent + item.traineeUnconfirmed;
                         else if (selTrainee === '출석') trAdd = item.traineeAttended;
                         else if (selTrainee === '결석') trAdd = item.traineeAbsent;
+                        else if (selTrainee === '휴가') trAdd = item.traineeVacation;
                         else if (selTrainee === '취소') trAdd = item.traineeCancel;
                         else if (selTrainee === '미확인') trAdd = item.traineeUnconfirmed;
                         tempTrainee.set(w, tempTrainee.get(w) + trAdd);
@@ -2076,7 +2223,7 @@
             } else {
                 dataTeacher = getWeeklyCounts(globalDataTeacher[selTeacher], 'none', false);
                 let tCountType = 'allStats';
-                if (selTrainee === '출석') tCountType = 'attend'; else if (selTrainee === '결석') tCountType = 'absent'; else if (selTrainee === '취소') tCountType = 'cancel'; else if (selTrainee === '미확인') tCountType = 'unconfirmed';
+                if (selTrainee === '출석') tCountType = 'attend'; else if (selTrainee === '결석') tCountType = 'absent'; else if (selTrainee === '휴가') tCountType = 'vacation'; else if (selTrainee === '취소') tCountType = 'cancel'; else if (selTrainee === '미확인') tCountType = 'unconfirmed';
                 dataTrainee = getWeeklyCounts(globalDataTrainee[selTrainee], tCountType, false);
                 dataSchedule = getWeeklyCounts(globalDataSchedule[selSchedule], 'none', false);
             }
@@ -2120,7 +2267,7 @@
                 }
 
                 let topRowBtns = '';
-                let allBtnsHtml = [makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-slate-500'), sessionBadgeModalHtml].filter(Boolean).join('');
+                let allBtnsHtml = [makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('휴가', item.statVacation || 0, 'bg-sky-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-slate-500'), sessionBadgeModalHtml].filter(Boolean).join('');
                 if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-1 w-full mb-1.5">${allBtnsHtml}</div>`;
                 if (filterStr === '미확인' && topRowBtns === '') return '';
 
@@ -2132,17 +2279,18 @@
 
                 let memoText = window.autoCorrectText(rawStatus);
                 let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
-                
+                const rawStatusCheck = rawStatus.replace(/\s+/g, '');
+
                 const isTeacherOnVacation = item.isTeacherVacation || false;
 
-                if ((isTeacherOnVacation || rawStatusCheck2.includes('휴가')) && !cleanMemoText.includes('선생님휴가')) {
+                if ((isTeacherOnVacation || rawStatusCheck.includes('휴가')) && !cleanMemoText.includes('선생님휴가')) {
                     cleanMemoText = cleanMemoText ? '선생님휴가 ' + cleanMemoText : '선생님휴가';
                 }
 
                 let memoColorClass = 'text-indigo-300';
-                if (rawStatusCheck2.includes('선생님휴가') || isTeacherOnVacation) memoColorClass = 'text-sky-400 font-bold';
-                else if (rawStatusCheck2.includes('결석') || rawStatusCheck2.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
-                
+                if (rawStatusCheck.includes('선생님휴가') || isTeacherOnVacation) memoColorClass = 'text-sky-400 font-bold';
+                else if (rawStatusCheck.includes('결석') || rawStatusCheck.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
+
                 let isMemoVisible = cleanMemoText !== '' && cleanMemoText !== '-';
                 let memoHtml = `<div class="truncate mt-0.5 leading-tight ${isMemoVisible ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
 
@@ -2154,9 +2302,10 @@
                 }
 
                 let cBg = '';
-                if (rawStatusCheck2.includes('휴가')) cBg = 'bg-sky-500/30 border-sky-400/50';
+                if (rawStatusCheck.includes('휴가')) cBg = 'bg-sky-500/30 border-sky-400/50';
                 else if (sAttend >= 1) cBg = 'bg-indigo-900/30 border-indigo-500/30';
                 else if (sAbsent >= 1) cBg = 'bg-rose-900/30 border-rose-500/30';
+                else if (item.statVacation >= 1) cBg = 'bg-sky-900/30 border-sky-500/30';
                 else if (sCancel >= 1) cBg = 'bg-orange-900/30 border-orange-500/30';
                 else cBg = 'bg-slate-800/60 border-slate-600/50';
 
@@ -2383,11 +2532,30 @@
                                 <div class="calendar-stat-item calendar-stat-teacher-vacation"><span>휴가</span><span class="font-bold">${dayData.teacherVacation}</span></div>
                             `;
                         } else if (type === 'trainee') {
+                            // 💡 상세 데이터(allData)가 있는 경우, 이를 기반으로 실시간 집계하여 요약 데이터의 누락(특히 휴가)을 보완함
+                            const dateStr = `${month + 1}/${i}`;
+                            const dStats = prepareDailyData(dateStr);
+
+                            let attended = dayData.traineeAttended || 0;
+                            let absent = dayData.traineeAbsent || 0;
+                            let vacation = dayData.traineeVacation || 0;
+                            let cancel = dayData.traineeCancel || 0;
+                            let unconfirmed = dayData.traineeUnconfirmed || 0;
+
+                            if (dStats && (dStats.totalAttend > 0 || dStats.totalVacation > 0 || dStats.totalAbsent > 0)) {
+                                attended = dStats.totalAttend;
+                                absent = dStats.totalAbsent;
+                                vacation = dStats.totalVacation;
+                                cancel = dStats.totalCancel;
+                                unconfirmed = dStats.totalUnconfirmed;
+                            }
+
                             statsHtml = `
-                                <div class="calendar-stat-item calendar-stat-trainee-attended"><span>출석</span><span class="font-bold">${dayData.traineeAttended}</span></div>
-                                <div class="calendar-stat-item calendar-stat-trainee-absent"><span>결석</span><span class="font-bold">${dayData.traineeAbsent}</span></div>
-                                <div class="calendar-stat-item calendar-stat-trainee-cancel"><span>취소</span><span class="font-bold">${dayData.traineeCancel}</span></div>
-                                <div class="calendar-stat-item calendar-stat-trainee-unconfirmed"><span>미확인</span><span class="font-bold">${dayData.traineeUnconfirmed}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-attended"><span>출석</span><span class="font-bold">${attended}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-absent"><span>결석</span><span class="font-bold">${absent}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-vacation"><span>휴가</span><span class="font-bold">${vacation}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-cancel"><span>취소</span><span class="font-bold">${cancel}</span></div>
+                                <div class="calendar-stat-item calendar-stat-trainee-unconfirmed"><span>미확인</span><span class="font-bold">${unconfirmed}</span></div>
                             `;
                         } else if (type === 'schedule') {
                             statsHtml = `
@@ -2462,7 +2630,7 @@
             document.addEventListener('click', function (e) {
                 const legendBtn = e.target.closest('.legend-btn');
                 if (!legendBtn) return;
-                
+
                 const type = legendBtn.dataset.type;
                 const filter = legendBtn.dataset.filter;
 
