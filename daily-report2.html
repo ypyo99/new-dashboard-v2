@@ -1111,6 +1111,16 @@
 
                 let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
                 let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
+
+                // 💡 [추가] '보조강사' 또는 '경로당'이 포함된 경우 상태값의 숫자를 대상자 수로 인정 (클램핑 방지 및 인원수 표시)
+                if (targetText.includes('보조강사') || targetText.includes('경로당')) {
+                    const matchNum = (item.status || '').match(/\d+/);
+                    if (matchNum) {
+                        const val = parseInt(matchNum[0], 10);
+                        if (val > stat_sCount) stat_sCount = val;
+                    }
+                }
+
                 if (isEmptyTarget) stat_sCount = 0;
 
                 let stat_sAttend = 0, stat_sAbsent = 0, stat_sCancel = 0, stat_sVacation = 0, stat_sUnconfirmed = 0;
@@ -1167,10 +1177,11 @@
 
                             if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
                                 if (stat_sCount === 1) {
-                                    stat_sAbsent = 1; stat_sCancel = 0; stat_sAttend = 0;
+                                    stat_sAbsent = 1; stat_sCancel = 1; stat_sAttend = 0; // 💡 결석/취소 동시 표시 허용
                                 } else {
                                     stat_sAbsent = Math.min(stat_sCount, countAbsentStr);
                                     stat_sCancel = Math.min(stat_sCount - stat_sAbsent, countCancelStr);
+                                    // 💡 취소가 포함된 경우에도 출석 숫자가 있다면 반영되도록 우선순위 조정 가능하나, 일단 요청대로 결석/취소 동시 표시 집중
                                     stat_sAttend = Math.max(0, stat_sCount - stat_sCancel - stat_sAbsent);
                                 }
                             } else if (stat_pStr.startsWith("취소")) {
@@ -1210,24 +1221,24 @@
                         }
                     }
 
-                    // 💡 [핵심 추가] 어떤 경우라도 상태 합계가 실제 대상자 수(stat_sCount)를 초과하지 않도록 엄격히 보정(Clamping)
-                    // (예: 1명인데 결석, 취소, 휴가 등이 여러 개 중복으로 적혀있는 경우 1명분으로만 카운트되도록 차단)
-                    let parsedTotal = stat_sAttend + stat_sAbsent + stat_sCancel + stat_sVacation + stat_sUnconfirmed;
-                    if (parsedTotal > stat_sCount) {
-                        let rem = stat_sCount;
-                        // 통계 반영 우선순위: 결석 > 휴가 > 취소 > 출석 > 미확인 순으로 남은 할당량을 채움
-                        let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
-                        let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
-                        let fCan = Math.min(stat_sCancel, rem); rem -= fCan;
-                        let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
-                        let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
+                // 💡 [핵심 수정] 출석과 취소가 겹치는 경우(예: '1, 취소')를 위해 취소(stat_sCancel)를 모수 합계 체크에서 제외
+                // 교육대상자수 그래프는 출석/결석/휴가/미확인으로만 구성되므로 이들의 합만 stat_sCount와 비교함
+                let parsedTotal = stat_sAttend + stat_sAbsent + stat_sVacation + stat_sUnconfirmed;
+                if (parsedTotal > stat_sCount) {
+                    let rem = stat_sCount;
+                    // 통계 반영 우선순위: 결석 > 휴가 > 출석 > 미확인 순으로 남은 할당량을 채움 (취소는 별도 관리)
+                    let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
+                    let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
+                    let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
+                    let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
 
-                        stat_sAbsent = fAbs;
-                        stat_sVacation = fVac;
-                        stat_sCancel = fCan;
-                        stat_sAttend = fAtt;
-                        stat_sUnconfirmed = fUnc;
-                    }
+                    stat_sAbsent = fAbs;
+                    stat_sVacation = fVac;
+                    stat_sAttend = fAtt;
+                    stat_sUnconfirmed = fUnc;
+                }
+                // 취소(stat_sCancel)는 대상자 수 내에서만 존재하도록 별도 보정 (출석과 중복 허용)
+                stat_sCancel = Math.min(stat_sCancel, stat_sCount);
                 }
 
                 item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statVacation = stat_sVacation; item.statUnconfirmed = stat_sUnconfirmed;
