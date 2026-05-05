@@ -133,6 +133,16 @@
             margin-bottom: 2px;
         }
 
+        .legend-btn {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .legend-btn:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
         .calendar-stat-item {
             font-size: clamp(9px, 2.5vw, 12px);
             /* 모바일에서는 폰트를 작게, 큰 화면은 12px 유지 */
@@ -505,7 +515,7 @@
                     class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
-                            <span class="shrink-0 w-3 h-3 rounded-full bg-blue-500"></span>주간 선생님 출근 트렌드
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-blue-500"></span>일별 선생님 출근 트렌드
                         </h3>
                         <select id="trendSelectTeacher"
                             class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-indigo-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
@@ -521,7 +531,7 @@
                     class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
-                            <span class="shrink-0 w-3 h-3 rounded-full bg-green-500"></span>주간 교육 대상자 수 트렌드
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-green-500"></span>일별 교육 대상자 수 트렌드
                         </h3>
                         <select id="trendSelectTrainee"
                             class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-emerald-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
@@ -539,7 +549,7 @@
                     class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
-                            <span class="shrink-0 w-3 h-3 rounded-full bg-purple-500"></span>주간 일정 수 트렌드
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-purple-500"></span>일별 일정 수 트렌드
                         </h3>
                         <select id="trendSelectSchedule"
                             class="border border-slate-600 rounded px-2 py-1 text-[clamp(12px,1vw,14px)] outline-none focus:border-purple-400 bg-slate-800 font-medium text-slate-200 cursor-pointer shadow-inner">
@@ -555,7 +565,7 @@
                     class="bg-slate-900/60 backdrop-blur-xl p-[clamp(12px,1.5vw,20px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-slate-300 text-[clamp(14px,1.2vw,20px)] flex items-center gap-2">
-                            <span class="shrink-0 w-3 h-3 rounded-full bg-orange-500"></span>주간 인원 트렌드
+                            <span class="shrink-0 w-3 h-3 rounded-full bg-orange-500"></span>일별 인원 트렌드
                         </h3>
                         <div
                             class="flex items-center gap-1 bg-orange-900/30 px-2 py-1 rounded-lg border border-orange-500/30 shadow-inner">
@@ -621,7 +631,7 @@
 
     <script>
         // 1. Globals & Setup
-        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygg7-Mb-KGXZIU-mzRgi1Ad-i6cBixdQ_oqgWEBpss_e3cexGy07YtgRQsIq6FMBepaQ/exec";
+        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxkkhYy5xeMnksyIDhprera998kcRYaSh2mIengWcrkiCFwtX4w3FYI9qiFzk6FQnbZ/exec";
         let globalSummaryData = [];
         let globalFilteredSummaryData = [];
         let allData = [];
@@ -703,6 +713,14 @@
             const day = date.getDay();
             const diff = date.getDate() - day + (day === 0 ? -6 : 1);
             date.setDate(diff);
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${mm}.${dd}`;
+        }
+
+        function getDayLabel(d) {
+            if (!d) return "";
+            const date = new Date(d);
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const dd = String(date.getDate()).padStart(2, '0');
             return `${mm}.${dd}`;
@@ -898,10 +916,13 @@
             if (!data || data.length < 5) return;
 
             let headerRowIdx = -1;
-            for (let i = 0; i < Math.min(5, data.length); i++) {
+            // 💡 날짜 패턴: MM/DD, MM-DD, YYYY/MM/DD 등을 모두 감지
+            const dateRegex = /(\d{4}|\d{1,2})\s*[/.-]\s*(\d{1,2})\s*([/.-]\s*(\d{1,2}))?/;
+
+            for (let i = 0; i < Math.min(10, data.length); i++) {
                 let isDateRow = false;
                 for (let j = 0; j < data[i].length; j++) {
-                    if (data[i][j] && data[i][j].match(/\d+\s*[/.-]\s*\d+/)) { isDateRow = true; break; }
+                    if (data[i][j] && dateRegex.test(data[i][j])) { isDateRow = true; break; }
                 }
                 if (isDateRow) { headerRowIdx = i; break; }
             }
@@ -912,26 +933,42 @@
             const currentYear = new Date().getFullYear();
 
             for (let j = 1; j < headerRow.length; j++) {
-                if (headerRow[j]) {
-                    const match = headerRow[j].match(/(\d+)\s*[/.-]\s*(\d+)/);
+                const cell = (headerRow[j] || '').trim();
+                if (cell) {
+                    const match = cell.match(dateRegex);
                     if (match) {
-                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
-                        d.setHours(0, 0, 0, 0); dateMap[j] = d;
+                        let y, m, d;
+                        if (match[4]) { // YYYY/MM/DD 또는 YY/MM/DD
+                            y = parseInt(match[1]);
+                            if (y < 100) y += 2000;
+                            m = parseInt(match[2]);
+                            d = parseInt(match[4]);
+                        } else { // MM/DD
+                            y = currentYear;
+                            m = parseInt(match[1]);
+                            d = parseInt(match[2]);
+                        }
+                        const dt = new Date(y, m - 1, d);
+                        dt.setHours(0, 0, 0, 0);
+                        if (!isNaN(dt.getTime())) dateMap[j] = dt;
                     }
                 }
             }
 
             const rowMap = {};
-            for (let i = headerRowIdx + 1; i < data.length; i++) {
-                let subCat = (data[i][1] || '').replace(/\s+/g, '');
-                if (!subCat) subCat = (data[i][0] || '').replace(/\s+/g, '');
-                if (subCat) rowMap[subCat] = i;
+            for (let i = 0; i < data.length; i++) {
+                // B열(1) 또는 A열(0)에서 제목 확인
+                let label = (data[i][1] || data[i][0] || '').toString().replace(/\s+/g, '');
+                if (label) rowMap[label] = i;
             }
 
             const getVal = (key, j) => {
-                if (rowMap[key] !== undefined && data[rowMap[key]] !== undefined) {
-                    const val = (data[rowMap[key]][j] || '').toString().replace(/,/g, '');
-                    const n = parseInt(val, 10); return isNaN(n) ? 0 : n;
+                const cleanKey = key.replace(/\s+/g, '');
+                const rIdx = rowMap[cleanKey];
+                if (rIdx !== undefined && data[rIdx] !== undefined) {
+                    const val = (data[rIdx][j] || '0').toString().replace(/[^0-9.-]/g, '');
+                    const n = parseFloat(val);
+                    return isNaN(n) ? 0 : n;
                 }
                 return 0;
             };
@@ -940,14 +977,22 @@
                 if (dateMap[j]) {
                     globalSummaryData.push({
                         dateObj: dateMap[j],
-                        teacherAttended: getVal('출근한선생님수', j), teacherVacation: getVal('휴가인선생님', j),
-                        traineeAttended: getVal('출석자수', j), traineeAbsent: getVal('결석자수', j),
-                        traineeCancel: getVal('취소자수', j), traineeVacation: getVal('휴가자수', j), traineeUnconfirmed: getVal('미확인자수', j),
-                        scheduleCompleted: getVal('완료된수', j), scheduleUnconfirmed: getVal('미확인된수', j),
-                        session15plus: getVal('15회이상', j), session8to14: getVal('8~14회', j), session7minus: getVal('7회이하', j)
+                        teacherAttended: getVal('출근한선생님수', j),
+                        teacherVacation: getVal('휴가인선생님', j),
+                        traineeAttended: getVal('출석자수', j),
+                        traineeAbsent: getVal('결석자수', j),
+                        traineeCancel: getVal('취소자수', j),
+                        traineeVacation: getVal('휴가자수', j),
+                        traineeUnconfirmed: getVal('미확인자수', j),
+                        scheduleCompleted: getVal('완료된수', j),
+                        scheduleUnconfirmed: getVal('미확인된수', j),
+                        session15plus: getVal('15회이상', j),
+                        session8to14: getVal('8~14회', j),
+                        session7minus: getVal('7회이하', j)
                     });
                 }
             }
+            console.log(`📊 요약 데이터 파싱 완료: ${globalSummaryData.length}일치`);
         }
 
         function processCSVText(text, teamName) {
@@ -1980,6 +2025,8 @@
 
             document.getElementById('kpiSession').textContent = sumTraineeCount(sessionGroups['전체']);
             globalFilteredSummaryData = globalSummaryData.filter(item => item.dateObj >= startD && item.dateObj <= endD);
+            // 💡 날짜순으로 정렬하여 트렌드 그래프 라벨 순서 보장
+            globalFilteredSummaryData.sort((a, b) => a.dateObj - b.dateObj);
 
             if (globalFilteredSummaryData && globalFilteredSummaryData.length > 0) {
                 let sumTeacherAttended = 0, sumTeacherVacation = 0, sumTraineeAttended = 0, sumTraineeAbsent = 0, sumTraineeCancel = 0, sumTraineeVacation = 0, sumTraineeUnconfirmed = 0, sumScheduleCompleted = 0, sumScheduleUnconfirmed = 0;
@@ -2060,36 +2107,30 @@
             ], 'session', 0);
             document.getElementById('gaugeSession').innerHTML = sessionGaugeHtml;
 
-            const weeklyDataMap = new Map();
-            let curr = new Date(startD); const day = curr.getDay(); const diff = curr.getDate() - day + (day === 0 ? -6 : 1);
-            curr.setDate(diff);
-            // 오늘이 주말(토/일)이면 현재 주를 제외하고 직전 주까지만 그리기
-            const todayForWeek = new Date(); todayForWeek.setHours(0, 0, 0, 0);
-            const todayDow = todayForWeek.getDay(); // 0=일, 6=토
-            let trendEndD = new Date(endD);
-            if (todayDow === 0 || todayDow === 6) {
-                const prevFriday = new Date(todayForWeek);
-                const daysToFriday = todayDow === 0 ? 2 : 1; // 일요일이면 2일 전(금), 토요일이면 1일 전(금)
-                prevFriday.setDate(prevFriday.getDate() - daysToFriday);
-                if (trendEndD > prevFriday) trendEndD = prevFriday;
-            }
-            let safetyLoopCounter = 0;
-            while (curr <= trendEndD && safetyLoopCounter < 100) {
-                weeklyDataMap.set(getWeekLabel(curr), 0);
-                curr.setDate(curr.getDate() + 7);
-                safetyLoopCounter++;
-            }
-            const endWeekLabel = getWeekLabel(trendEndD);
-            if (!weeklyDataMap.has(endWeekLabel)) weeklyDataMap.set(endWeekLabel, 0);
+            const dailyDataMap = new Map();
+            // 💡 데이터가 모두 0인 날(수업 없는 날)을 제외하여 그래프를 매끄럽게 연결
+            const existingDates = globalFilteredSummaryData
+                .filter(item => (item.teacherAttended + item.traineeAttended + item.scheduleCompleted) > 0)
+                .map(item => getDayLabel(item.dateObj))
+                .filter((v, i, a) => v !== "" && a.indexOf(v) === i); 
+
+            existingDates.forEach(dLabel => dailyDataMap.set(dLabel, 0));
 
             let scheduleCompletedItems = graphSchedulesAll.filter(it => !(it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0));
             let scheduleUnconfirmedItems = graphSchedulesAll.filter(it => it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0);
 
             globalDataTeacher = { '전체': teacherGroups['전체'], '출근': teacherGroups['출근'], '휴가': teacherGroups['휴가'] };
-            globalDataTrainee = { '전체': graphSchedulesAll, '출석': graphSchedulesAll.filter(i => i.statAttend >= 1), '결석': graphSchedulesAll.filter(i => i.statAbsent >= 1), '취소': graphSchedulesAll.filter(i => i.statCancel >= 1), '휴가': graphSchedulesAll.filter(i => i.statVacation >= 1), '미확인': graphSchedulesAll.filter(i => i.statUnconfirmed >= 1) };
+            globalDataTrainee = {
+                '전체': traineeGroups['전체'],
+                '출석': traineeGroups['출석'],
+                '결석': traineeGroups['결석'],
+                '휴가': traineeGroups['휴가'],
+                '취소': traineeGroups['취소'],
+                '미확인': traineeGroups['미확인']
+            };
             globalDataSchedule = { '전체': graphSchedulesAll, '완료': scheduleCompletedItems, '미확인': scheduleUnconfirmedItems };
             globalDataSession = graphTraineesAll;
-            globalWeeklyLabels = Array.from(weeklyDataMap.keys());
+            globalWeeklyLabels = Array.from(dailyDataMap.keys());
 
             const selTeacher = document.getElementById('trendSelectTeacher').value || '전체';
             const selTrainee = document.getElementById('trendSelectTrainee').value || '전체';
@@ -2104,11 +2145,11 @@
                     if (isSession && item.sessionCount) {
                         const sCount = parseInt(item.sessionCount, 10);
                         if (sCount >= minSess && sCount <= maxSess) {
-                            const w = getWeekLabel(item.dateObj);
+                            const w = getDayLabel(item.dateObj);
                             if (tempMap.has(w)) tempMap.set(w, tempMap.get(w) + (item.calcCount || 0));
                         }
                     } else if (!isSession) {
-                        const w = getWeekLabel(item.dateObj);
+                        const w = getDayLabel(item.dateObj);
                         if (tempMap.has(w)) {
                             let addVal = 1;
                             if (countType === 'attend') addVal = item.statAttend || 0;
@@ -2143,7 +2184,7 @@
                         if (validTraineeNamesArray.length === 0) validTraineeNamesArray = ['-'];
                     } else validTraineeNamesArray = ['-'];
 
-                    const w = item.dateObj ? getWeekLabel(item.dateObj) : null;
+                    const w = item.dateObj ? getDayLabel(item.dateObj) : null;
                     if (!w || !weeklySessionMaps[w]) return;
 
                     validTraineeNamesArray.forEach(name => {
@@ -2184,6 +2225,7 @@
                 });
             };
 
+            // 💡 구글 시트의 통계 데이터를 기반으로 트렌드 그래프 데이터 생성
             let dataTeacher = []; let dataTrainee = []; let dataSchedule = []; const dataSession = getWeeklySessionTrendData();
 
             if (globalFilteredSummaryData && globalFilteredSummaryData.length > 0) {
@@ -2191,29 +2233,29 @@
                 globalWeeklyLabels.forEach(w => { tempTeacher.set(w, 0); tempTrainee.set(w, 0); tempSchedule.set(w, 0); });
 
                 globalFilteredSummaryData.forEach(item => {
-                    const w = getWeekLabel(item.dateObj);
+                    const w = getDayLabel(item.dateObj); // 💡 주간(getWeekLabel)이 아닌 일별(getDayLabel)로 매칭
                     if (tempTeacher.has(w)) {
                         let tAdd = 0;
-                        if (selTeacher === '전체') tAdd = item.teacherAttended + item.teacherVacation;
-                        else if (selTeacher === '출근') tAdd = item.teacherAttended;
-                        else if (selTeacher === '휴가') tAdd = item.teacherVacation;
+                        if (selTeacher === '전체') tAdd = (item.teacherAttended || 0) + (item.teacherVacation || 0);
+                        else if (selTeacher === '출근') tAdd = (item.teacherAttended || 0);
+                        else if (selTeacher === '휴가') tAdd = (item.teacherVacation || 0);
                         tempTeacher.set(w, tempTeacher.get(w) + tAdd);
                     }
                     if (tempTrainee.has(w)) {
                         let trAdd = 0;
-                        if (selTrainee === '전체') trAdd = item.traineeAttended + item.traineeAbsent + item.traineeUnconfirmed;
-                        else if (selTrainee === '출석') trAdd = item.traineeAttended;
-                        else if (selTrainee === '결석') trAdd = item.traineeAbsent;
-                        else if (selTrainee === '휴가') trAdd = item.traineeVacation;
-                        else if (selTrainee === '취소') trAdd = item.traineeCancel;
-                        else if (selTrainee === '미확인') trAdd = item.traineeUnconfirmed;
+                        if (selTrainee === '전체') trAdd = (item.traineeAttended || 0) + (item.traineeAbsent || 0) + (item.traineeCancel || 0) + (item.traineeVacation || 0) + (item.traineeUnconfirmed || 0);
+                        else if (selTrainee === '출석') trAdd = (item.traineeAttended || 0);
+                        else if (selTrainee === '결석') trAdd = (item.traineeAbsent || 0);
+                        else if (selTrainee === '휴가') trAdd = (item.traineeVacation || 0);
+                        else if (selTrainee === '취소') trAdd = (item.traineeCancel || 0);
+                        else if (selTrainee === '미확인') trAdd = (item.traineeUnconfirmed || 0);
                         tempTrainee.set(w, tempTrainee.get(w) + trAdd);
                     }
                     if (tempSchedule.has(w)) {
                         let sAdd = 0;
-                        if (selSchedule === '전체') sAdd = item.scheduleCompleted + item.scheduleUnconfirmed;
-                        else if (selSchedule === '완료') sAdd = item.scheduleCompleted;
-                        else if (selSchedule === '미확인') sAdd = item.scheduleUnconfirmed;
+                        if (selSchedule === '전체') sAdd = (item.scheduleCompleted || 0) + (item.scheduleUnconfirmed || 0);
+                        else if (selSchedule === '완료') sAdd = (item.scheduleCompleted || 0);
+                        else if (selSchedule === '미확인') sAdd = (item.scheduleUnconfirmed || 0);
                         tempSchedule.set(w, tempSchedule.get(w) + sAdd);
                     }
                 });
@@ -2221,6 +2263,7 @@
                 dataTrainee = globalWeeklyLabels.map(l => tempTrainee.get(l));
                 dataSchedule = globalWeeklyLabels.map(l => tempSchedule.get(l));
             } else {
+                // 시트 데이터가 없는 경우에만 실시간 계산 데이터 사용 (Fallback)
                 dataTeacher = getWeeklyCounts(globalDataTeacher[selTeacher], 'none', false);
                 let tCountType = 'allStats';
                 if (selTrainee === '출석') tCountType = 'attend'; else if (selTrainee === '결석') tCountType = 'absent'; else if (selTrainee === '휴가') tCountType = 'vacation'; else if (selTrainee === '취소') tCountType = 'cancel'; else if (selTrainee === '미확인') tCountType = 'unconfirmed';
@@ -2315,6 +2358,10 @@
 
             const buildHtml = (list, type, filterStr) => {
                 if (list.length === 0) return '<div class="text-center py-20 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
+
+                // 💡 날짜순(과거 -> 최신)으로 정렬
+                list.sort((a, b) => (a.dateObj && b.dateObj) ? a.dateObj - b.dateObj : 0);
+
                 let html = '';
                 const gridClass = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-[clamp(8px,1vw,14px)]';
 
@@ -2375,6 +2422,8 @@
                         dataList = globalDataTrainee['출석'];
                     } else if (filter === '결석') {
                         dataList = globalDataTrainee['결석'];
+                    } else if (filter === '휴가') {
+                        dataList = globalDataTrainee['휴가'];
                     } else if (filter === '취소') {
                         dataList = globalDataTrainee['취소'];
                     } else if (filter === '미확인') {
