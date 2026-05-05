@@ -498,7 +498,8 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원 (조회 기간 기준)</p>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원 (보조강사 인원 제외)
+                            </p>
                             <p class="font-black text-white leading-none tracking-tight text-[clamp(30px,3vw,48px)]">
                                 <span id="kpiSession">-</span><span
                                     class="ml-1 text-slate-400 font-medium text-[clamp(16px,1.5vw,24px)]">명</span>
@@ -2112,7 +2113,7 @@
             const existingDates = globalFilteredSummaryData
                 .filter(item => (item.teacherAttended + item.traineeAttended + item.scheduleCompleted) > 0)
                 .map(item => getDayLabel(item.dateObj))
-                .filter((v, i, a) => v !== "" && a.indexOf(v) === i); 
+                .filter((v, i, a) => v !== "" && a.indexOf(v) === i);
 
             existingDates.forEach(dLabel => dailyDataMap.set(dLabel, 0));
 
