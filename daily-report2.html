@@ -351,7 +351,8 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원</p>
+                            <p class="font-bold text-slate-400 mb-1 text-[clamp(14px,1.2vw,20px)]">회차별 인원(보조강사 인원 제외)
+                            </p>
                             <p
                                 class="font-black text-slate-100 leading-none tracking-tight text-[clamp(30px,3vw,48px)] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
                                 <span id="kpiSession">-</span><span
@@ -1221,24 +1222,24 @@
                         }
                     }
 
-                // 💡 [핵심 수정] 출석과 취소가 겹치는 경우(예: '1, 취소')를 위해 취소(stat_sCancel)를 모수 합계 체크에서 제외
-                // 교육대상자수 그래프는 출석/결석/휴가/미확인으로만 구성되므로 이들의 합만 stat_sCount와 비교함
-                let parsedTotal = stat_sAttend + stat_sAbsent + stat_sVacation + stat_sUnconfirmed;
-                if (parsedTotal > stat_sCount) {
-                    let rem = stat_sCount;
-                    // 통계 반영 우선순위: 결석 > 휴가 > 출석 > 미확인 순으로 남은 할당량을 채움 (취소는 별도 관리)
-                    let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
-                    let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
-                    let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
-                    let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
+                    // 💡 [핵심 수정] 출석과 취소가 겹치는 경우(예: '1, 취소')를 위해 취소(stat_sCancel)를 모수 합계 체크에서 제외
+                    // 교육대상자수 그래프는 출석/결석/휴가/미확인으로만 구성되므로 이들의 합만 stat_sCount와 비교함
+                    let parsedTotal = stat_sAttend + stat_sAbsent + stat_sVacation + stat_sUnconfirmed;
+                    if (parsedTotal > stat_sCount) {
+                        let rem = stat_sCount;
+                        // 통계 반영 우선순위: 결석 > 휴가 > 출석 > 미확인 순으로 남은 할당량을 채움 (취소는 별도 관리)
+                        let fAbs = Math.min(stat_sAbsent, rem); rem -= fAbs;
+                        let fVac = Math.min(stat_sVacation, rem); rem -= fVac;
+                        let fAtt = Math.min(stat_sAttend, rem); rem -= fAtt;
+                        let fUnc = Math.min(stat_sUnconfirmed, rem); rem -= fUnc;
 
-                    stat_sAbsent = fAbs;
-                    stat_sVacation = fVac;
-                    stat_sAttend = fAtt;
-                    stat_sUnconfirmed = fUnc;
-                }
-                // 취소(stat_sCancel)는 대상자 수 내에서만 존재하도록 별도 보정 (출석과 중복 허용)
-                stat_sCancel = Math.min(stat_sCancel, stat_sCount);
+                        stat_sAbsent = fAbs;
+                        stat_sVacation = fVac;
+                        stat_sAttend = fAtt;
+                        stat_sUnconfirmed = fUnc;
+                    }
+                    // 취소(stat_sCancel)는 대상자 수 내에서만 존재하도록 별도 보정 (출석과 중복 허용)
+                    stat_sCancel = Math.min(stat_sCancel, stat_sCount);
                 }
 
                 item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statVacation = stat_sVacation; item.statUnconfirmed = stat_sUnconfirmed;
