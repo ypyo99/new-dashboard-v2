@@ -30,15 +30,18 @@
         <div class="px-3 py-3 md:px-8 md:py-6 max-w-7xl mx-auto flex flex-row justify-between items-center gap-2 md:gap-4">
             
             <!-- 로고 및 타이틀 영역 -->
-            <div class="flex items-center gap-3 md:gap-4 min-w-0">
-                <div class="bg-slate-800/80 border border-white/10 p-2 md:p-2 rounded-xl shadow-lg backdrop-blur-sm shrink-0">
-                    <!-- 기존 Logo_of_Seoul.png 유지 (없을 경우를 대비해 둥근 모서리 적용) -->
-                    <img src="Logo_of_Seoul.png" alt="서울시 로고" class="h-10 sm:h-10 md:h-11 object-contain rounded-md" onerror="this.style.display='none'">
+            <div class="flex flex-col items-start text-left shrink min-w-0">
+                <div class="flex items-center mb-[clamp(2px,0.5vw,4px)] shrink min-w-0">
+                    <img src="Logo_of_Seoul.png" alt="서울시 로고"
+                        class="h-[clamp(14px,3vw,48px)] bg-slate-800/80 border border-white/10 px-[clamp(2px,0.5vw,8px)] py-[clamp(2px,0.5vw,4px)] rounded-[clamp(6px,1vw,16px)] object-contain mr-[clamp(4px,1vw,8px)] shrink-0 shadow-lg"
+                        onerror="this.style.display='none'">
+                    <h1
+                        class="font-bold text-[clamp(11px,2.5vw,36px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
+                        성동노인종합복지관</h1>
                 </div>
-                <div class="min-w-0 flex flex-col justify-center">
-                    <h1 class="font-extrabold text-[20px] sm:text-xl md:text-[34px] tracking-tight leading-tight mb-0 md:mb-1.5 drop-shadow-sm whitespace-nowrap truncate">성동노인종합복지관</h1>
-                    <p class="font-semibold text-yellow-300 text-[13px] sm:text-[13px] md:text-[18px] tracking-wide drop-shadow-sm whitespace-nowrap truncate">디지털교육 서포터즈</p>
-                </div>
+                <p
+                    class="font-bold text-yellow-300 text-[clamp(14px,2.6vw,36px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
+                    디지털교육 서포터즈</p>
             </div>
             
             <!-- 실시간 시계 표시 영역: 반투명 박스로 감싸서 디자인 포인트 추가 -->
