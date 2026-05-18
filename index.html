@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>대시보드 메인 메뉴</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 고급스러운 한글 폰트인 Pretendard를 적용합니다 -->
-    <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
-        body { 
+        body {
             font-family: 'Pretendard', sans-serif;
             /* 부드럽고 세련된 다크 그라데이션 배경 */
             background: linear-gradient(135deg, #0f172a 0%, #000000 100%);
             min-height: 100vh;
         }
+
         /* 글래스모피즘(유리) 효과를 위한 커스텀 클래스 */
         .glass-card {
             background: rgba(30, 41, 59, 0.6);
@@ -23,12 +26,15 @@
         }
     </style>
 </head>
+
 <body class="text-slate-100 antialiased selection:bg-blue-200 selection:text-blue-900 flex flex-col">
 
     <!-- 상단 헤더 영역: 글래스모피즘 기반 다크 헤더 -->
-    <header class="bg-slate-900/80 backdrop-blur-xl border-b border-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)] sticky top-0 z-50">
-        <div class="px-3 py-3 md:px-8 md:py-6 max-w-7xl mx-auto flex flex-row justify-between items-center gap-2 md:gap-4">
-            
+    <header
+        class="bg-slate-900/80 backdrop-blur-xl border-b border-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.5)] sticky top-0 z-50">
+        <div
+            class="px-3 py-3 md:px-8 md:py-6 max-w-7xl mx-auto flex flex-row justify-between items-center gap-2 md:gap-4">
+
             <!-- 로고 및 타이틀 영역 -->
             <div class="flex flex-col items-start text-left shrink min-w-0">
                 <div class="flex items-center mb-[clamp(2px,0.5vw,4px)] shrink min-w-0">
@@ -36,35 +42,45 @@
                         class="h-[clamp(18px,4.5vw,64px)] bg-slate-800/80 border border-white/10 px-[clamp(2px,0.5vw,8px)] py-[clamp(2px,0.5vw,4px)] rounded-[clamp(6px,1vw,16px)] object-contain mr-[clamp(4px,1vw,8px)] shrink-0 shadow-lg"
                         onerror="this.style.display='none'">
                     <h1
-                        class="font-bold text-[clamp(15px,4vw,60px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
+                        class="font-bold text-[clamp(16px,4vw,60px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
                         성동노인종합복지관</h1>
                 </div>
                 <p
-                    class="font-bold text-yellow-300 text-[clamp(16px,3vw,48px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
+                    class="font-bold text-yellow-300 text-[clamp(13px,3vw,48px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
                     디지털교육 서포터즈</p>
             </div>
-            
+
             <!-- 실시간 시계 표시 영역: 반투명 박스로 감싸서 디자인 포인트 추가 -->
-            <div class="flex flex-col items-end justify-center bg-slate-800/50 px-3 py-1.5 md:px-6 md:py-3 rounded-lg md:rounded-2xl backdrop-blur-md border border-white/10 shadow-inner shrink-0">
-                <div id="current-date" class="text-sm sm:text-lg md:text-xl font-bold text-blue-200 mb-1 opacity-100 whitespace-nowrap leading-none md:leading-normal"></div>
-                <div id="current-time" class="text-[12px] sm:text-lg md:text-2xl font-black tracking-wider tabular-nums text-white drop-shadow-md whitespace-nowrap leading-none md:leading-normal"></div>
+            <div
+                class="flex flex-col items-end justify-center bg-slate-800/50 px-3 py-1.5 md:px-6 md:py-3 rounded-lg md:rounded-2xl backdrop-blur-md border border-white/10 shadow-inner shrink-0">
+                <div id="current-date"
+                    class="text-sm sm:text-lg md:text-xl font-bold text-blue-200 mb-1 opacity-100 whitespace-nowrap leading-none md:leading-normal">
+                </div>
+                <div id="current-time"
+                    class="text-[12px] sm:text-lg md:text-2xl font-black tracking-wider tabular-nums text-white drop-shadow-md whitespace-nowrap leading-none md:leading-normal">
+                </div>
             </div>
-            
+
         </div>
     </header>
 
     <!-- 메인 콘텐츠 영역: PC에서는 가로 배치(grid-cols-2), 스마트폰에서는 세로 배치(grid-cols-1) -->
     <main class="flex-grow flex items-center justify-center p-6 mt-2 md:mt-12">
         <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-            
+
             <!-- 1. 일별 교육 진행 현황 버튼 -->
-            <a href="daily-report2.html" class="glass-card rounded-[32px] p-8 md:p-14 flex flex-col items-center justify-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:-translate-y-2 transition-all duration-300 cursor-pointer group relative overflow-hidden outline-none focus:ring-4 focus:ring-blue-500">
+            <a href="daily-report2.html"
+                class="glass-card rounded-[32px] p-8 md:p-14 flex flex-col items-center justify-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:-translate-y-2 transition-all duration-300 cursor-pointer group relative overflow-hidden outline-none focus:ring-4 focus:ring-blue-500">
                 <!-- 마우스 오버 시 부드러운 네온 배경 효과 -->
-                <div class="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                </div>
+
                 <!-- 아이콘 박스: 입체감 있는 그라데이션과 그림자 -->
-                <div class="bg-gradient-to-br from-[#4f46e5] to-[#3b82f6] w-20 h-20 md:w-28 md:h-28 rounded-[1.25rem] md:rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 relative z-10">
-                    <svg class="w-10 h-10 md:w-14 md:h-14 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <div
+                    class="bg-gradient-to-br from-[#4f46e5] to-[#3b82f6] w-20 h-20 md:w-28 md:h-28 rounded-[1.25rem] md:rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 relative z-10">
+                    <svg class="w-10 h-10 md:w-14 md:h-14 drop-shadow-sm" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="16" y1="2" x2="16" y2="6"></line>
                         <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -74,18 +90,25 @@
                 </div>
                 <div class="text-center relative z-10 mt-2">
                     <h2 class="text-2xl md:text-3xl font-extrabold text-slate-100 mb-3 tracking-tight">일별 교육 진행 현황</h2>
-                    <p class="text-slate-300 text-sm md:text-base font-medium bg-slate-800/80 border border-slate-600 px-4 py-1.5 rounded-full inline-block">하루 단위 교육 진행 상황을 확인합니다</p>
+                    <p
+                        class="text-slate-300 text-sm md:text-base font-medium bg-slate-800/80 border border-slate-600 px-4 py-1.5 rounded-full inline-block">
+                        하루 단위 교육 진행 상황을 확인합니다</p>
                 </div>
             </a>
 
             <!-- 2. 기간별 교육 진행 현황 버튼 -->
-            <a href="periodical-report2.html" class="glass-card rounded-[32px] p-8 md:p-14 flex flex-col items-center justify-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_0_40px_rgba(147,51,234,0.3)] hover:-translate-y-2 transition-all duration-300 cursor-pointer group relative overflow-hidden outline-none focus:ring-4 focus:ring-purple-500">
+            <a href="periodical-report2.html"
+                class="glass-card rounded-[32px] p-8 md:p-14 flex flex-col items-center justify-center gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:shadow-[0_0_40px_rgba(147,51,234,0.3)] hover:-translate-y-2 transition-all duration-300 cursor-pointer group relative overflow-hidden outline-none focus:ring-4 focus:ring-purple-500">
                 <!-- 마우스 오버 시 부드러운 네온 배경 효과 -->
-                <div class="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                </div>
+
                 <!-- 아이콘 박스: 입체감 있는 그라데이션과 그림자 -->
-                <div class="bg-gradient-to-br from-[#9333ea] to-[#a855f7] w-20 h-20 md:w-28 md:h-28 rounded-[1.25rem] md:rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-purple-500/30 transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 relative z-10">
-                    <svg class="w-10 h-10 md:w-14 md:h-14 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <div
+                    class="bg-gradient-to-br from-[#9333ea] to-[#a855f7] w-20 h-20 md:w-28 md:h-28 rounded-[1.25rem] md:rounded-[1.75rem] flex items-center justify-center text-white shadow-lg shadow-purple-500/30 transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 relative z-10">
+                    <svg class="w-10 h-10 md:w-14 md:h-14 drop-shadow-sm" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <!-- X/Y 그래프 축 -->
                         <path d="M3 3v18h18"></path>
                         <!-- 우상향 꺾은선 (성장, 기간별 트렌드 의미) -->
@@ -96,7 +119,9 @@
                 </div>
                 <div class="text-center relative z-10 mt-2">
                     <h2 class="text-2xl md:text-3xl font-extrabold text-slate-100 mb-3 tracking-tight">기간별 교육 진행 현황</h2>
-                    <p class="text-slate-300 text-sm md:text-base font-medium bg-slate-800/80 border border-slate-600 px-4 py-1.5 rounded-full inline-block">특정 기간의 교육 진행 통계를 확인합니다</p>
+                    <p
+                        class="text-slate-300 text-sm md:text-base font-medium bg-slate-800/80 border border-slate-600 px-4 py-1.5 rounded-full inline-block">
+                        특정 기간의 교육 진행 통계를 확인합니다</p>
                 </div>
             </a>
 
@@ -110,7 +135,7 @@
 
     <script>
         // 프리뷰 환경을 위한 세련된 커스텀 알림창 스크립트
-        window.alert = function(message) {
+        window.alert = function (message) {
             const alertBox = document.createElement('div');
             alertBox.style.cssText = `
                 position: fixed; 
@@ -133,49 +158,50 @@
             `;
             alertBox.innerText = message;
             document.body.appendChild(alertBox);
-            
+
             // 자연스럽게 떠오르는 애니메이션
             requestAnimationFrame(() => {
                 alertBox.style.transform = 'translateX(-50%) translateY(0)';
                 alertBox.style.opacity = '1';
             });
-            
+
             // 2.5초 뒤에 서서히 사라지도록 설정
             setTimeout(() => {
                 alertBox.style.transform = 'translateX(-50%) translateY(20px)';
                 alertBox.style.opacity = '0';
                 setTimeout(() => alertBox.remove(), 400);
-            }, 2500); 
+            }, 2500);
         };
 
         // 실시간 시계 업데이트 함수
         function updateClock() {
             const now = new Date();
             const days = ['일', '월', '화', '수', '목', '금', '토'];
-            
+
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const date = String(now.getDate()).padStart(2, '0');
             const dayName = days[now.getDay()];
-            
+
             let hours = now.getHours();
             const ampm = hours >= 12 ? '오후' : '오전';
             hours = hours % 12;
-            hours = hours ? hours : 12; 
-            
+            hours = hours ? hours : 12;
+
             const strHours = String(hours).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
-            
+
             // 날짜, 시간, 그리고 푸터의 연도 업데이트
             document.getElementById('current-date').textContent = `${year}년 ${month}월 ${date}일 (${dayName})`;
             document.getElementById('current-time').textContent = `${ampm} ${strHours}:${minutes}:${seconds}`;
             document.getElementById('current-year').textContent = year;
         }
-        
+
         // 초기 1회 실행 후 1초마다 반복
         updateClock();
         setInterval(updateClock, 1000);
     </script>
 </body>
+
 </html>
