@@ -1879,7 +1879,11 @@
                                 if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sCancel = stat_sCount === 1 ? 1 : stat_sCount - 1; }
                                 else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sCancel = stat_sCount - firstNum; } else { stat_sCancel = stat_sCount; }
                             } else {
-                                if (match) stat_sAttend = firstNum; else stat_sAttend = stat_sCount;
+                                if (match) {
+                                    stat_sAttend = firstNum;
+                                } else {
+                                    stat_sUnconfirmed = stat_sCount;
+                                }
                             }
                         }
                     }

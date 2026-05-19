@@ -1217,8 +1217,11 @@
                                     stat_sCancel = stat_sCount;
                                 }
                             } else {
-                                if (match) stat_sAttend = firstNum;
-                                else stat_sAttend = stat_sCount;
+                                if (match) {
+                                    stat_sAttend = firstNum;
+                                } else {
+                                    stat_sUnconfirmed = stat_sCount;
+                                }
                             }
                         }
                     }
