@@ -2211,9 +2211,9 @@
             const kpiModal = document.getElementById('kpiModal');
             const sessionModal = document.getElementById('sessionModal');
 
-            if (!setupState.classList.contains('hidden') ||
-                !kpiModal.classList.contains('hidden') ||
-                !sessionModal.classList.contains('hidden')) {
+            if ((setupState && !setupState.classList.contains('hidden')) ||
+                (kpiModal && !kpiModal.classList.contains('hidden')) ||
+                (sessionModal && !sessionModal.classList.contains('hidden'))) {
                 return;
             }
 
