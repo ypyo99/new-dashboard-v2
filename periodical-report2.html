@@ -1201,7 +1201,7 @@
                 let stat_sNames = targetText ? targetText.split(/[/,]/).filter(n => n.trim().length > 0 && n !== '-') : [];
                 let stat_sCount = stat_sNames.length > 0 ? stat_sNames.length : 1;
 
-                if (targetText.includes('보조강사') || targetText.includes('경로당')) {
+                if (targetText.includes('보조강사') || targetText.includes('경로당') || targetText.includes('반') || targetText.includes('보조') || targetText.includes('컴기초')) {
                     const matchNum = (item.status || '').match(/\d+/);
                     if (matchNum) {
                         const val = parseInt(matchNum[0], 10);
@@ -1288,6 +1288,18 @@
                         stat_sAbsent = fAbs; stat_sVacation = fVac; stat_sAttend = fAtt; stat_sUnconfirmed = fUnc;
                     }
                     stat_sCancel = Math.min(stat_sCancel, stat_sCount);
+                }
+
+                // 💡 [추가] '보조강사', '경로당', '반' 등이 포함되고 순수하게 숫자만(또는 출석 숫자만) 적혀있는 경우, 모든 클램핑 로직을 무시하고 강제로 반영
+                if (targetText.includes('보조강사') || targetText.includes('경로당') || targetText.includes('반') || targetText.includes('보조') || targetText.includes('컴기초')) {
+                    const matchNum = stat_pStr.match(/\d+/);
+                    if (matchNum && !stat_pStr.includes('결석') && !stat_pStr.includes('취소') && !stat_pStr.includes('휴가')) {
+                        const val = parseInt(matchNum[0], 10);
+                        if (val >= 1) {
+                            stat_sCount = val;
+                            stat_sAttend = val;
+                        }
+                    }
                 }
 
                 item.statAttend = stat_sAttend; item.statAbsent = stat_sAbsent; item.statCancel = stat_sCancel; item.statVacation = stat_sVacation; item.statUnconfirmed = stat_sUnconfirmed;
@@ -2318,7 +2330,7 @@
                 }
 
                 let topRowBtns = '';
-                let allBtnsHtml = [makeStatBtnModal('출석', sAttend, 'bg-blue-600'), makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('휴가', item.statVacation || 0, 'bg-sky-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-slate-500'), sessionBadgeModalHtml].filter(Boolean).join('');
+                let allBtnsHtml = [makeStatBtnModal('결석', sAbsent, 'bg-red-500'), makeStatBtnModal('휴가', item.statVacation || 0, 'bg-sky-500'), makeStatBtnModal('취소', sCancel, 'bg-orange-500'), makeStatBtnModal('미확인', sUnconfirmed, 'bg-slate-500')].filter(Boolean).join('');
                 if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-1 w-full mb-1.5">${allBtnsHtml}</div>`;
                 if (filterStr === '미확인' && topRowBtns === '') return '';
 
