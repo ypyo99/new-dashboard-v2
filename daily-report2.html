@@ -2093,6 +2093,7 @@
                         dataList = baseList.filter(it => {
                             let t = (it.target || '').replace(/\s+/g, '');
                             if (t === '-' || t === '') return false;
+                            if (t.includes('자체학습')) return false; // 💡 '자체학습' 항목 완료 리스트에서 제외
                             // 💡 휴가도 일정상 완료된 것으로 판단하여 필터링
                             return !(it.statUnconfirmed >= 1 && it.statAttend === 0 && it.statAbsent === 0 && it.statCancel === 0 && (it.statVacation || 0) === 0);
                         });
