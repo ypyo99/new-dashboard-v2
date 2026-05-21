@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>기간별 교육 진행 현황 - 통합 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         ::-webkit-scrollbar {
@@ -368,51 +368,6 @@
     </header>
 
     <div class="w-[99.5%] max-w-none mx-auto space-y-[clamp(6px,0.8vw,12px)] px-1">
-        <div id="setupState"
-            class="hidden bg-slate-900/60 backdrop-blur-xl p-[clamp(32px,3vw,48px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col items-center justify-center min-h-[400px]">
-            <div class="max-w-2xl 2xl:max-w-5xl w-full">
-                <h2
-                    class="font-bold text-slate-100 mb-[clamp(16px,2vw,24px)] text-center text-[clamp(24px,3vw,48px)] drop-shadow-sm">
-                    구글 시트 연동 설정</h2>
-                <div class="space-y-[clamp(16px,2vw,32px)] mb-8">
-                    <div
-                        class="bg-indigo-900/40 border border-indigo-500/50 text-indigo-100 p-4 rounded-xl text-[clamp(13px,1.2vw,16px)] leading-relaxed shadow-sm">
-                        <p class="font-bold mb-1 text-indigo-300">💡 데이터 최적화 구조 안내</p>
-                        <p class="opacity-90">선생님, 대상자, 일정 수 데이터는 <b>[집계 요약 시트]</b>에서 불러옵니다. 단, '회차별 인원 추이'와 '핵심 키워드'
-                            분석을 위해 <b>[1, 2, 3팀 상세 시트]</b> 데이터도 함께 분석합니다.</p>
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">1. 집계/요약 데이터 시트
-                            (차트 3종용)</label>
-                        <input type="text" id="summaryUrl"
-                            class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
-                            value="https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=43019844#gid=43019844">
-                    </div>
-                    <div class="border-t border-white/10 pt-4">
-                        <label class="block font-bold text-slate-300 mb-2 text-[clamp(14px,1.5vw,24px)]">2. 상세 데이터 시트
-                            (회차/키워드 분석용)</label>
-                        <div class="space-y-2">
-                            <input type="text" id="url1"
-                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
-                                placeholder="1팀 주소">
-                            <input type="text" id="url2"
-                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
-                                placeholder="2팀 주소">
-                            <input type="text" id="url3"
-                                class="w-full border border-slate-600 bg-slate-800 text-slate-200 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)]"
-                                placeholder="3팀 주소">
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-center gap-4">
-                    <button id="fetchDataBtn"
-                        class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg text-[clamp(16px,1.5vw,24px)] shadow-lg hover:bg-indigo-500 transition">저장
-                        및 업데이트</button>
-                    <button id="hideSetupBtn"
-                        class="px-6 py-2 bg-slate-700 text-slate-200 font-bold border border-slate-600 rounded-lg text-[clamp(16px,1.5vw,24px)] hover:bg-slate-600 transition">닫기</button>
-                </div>
-            </div>
-        </div>
 
         <div id="dashboardContent" class="space-y-[clamp(8px,1vw,16px)] pb-4">
 
@@ -632,36 +587,27 @@
 
     <script>
         // 1. Globals & Setup
-        window.APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxkkhYy5xeMnksyIDhprera998kcRYaSh2mIengWcrkiCFwtX4w3FYI9qiFzk6FQnbZ/exec";
         let globalSummaryData = [];
         let globalFilteredSummaryData = [];
         let allData = [];
         let isFetching = false;
         let isDatesInitialized = false;
-        let autoSyncInterval = null;
         window.scheduleDetailsMap = {};
+
+        const SUPABASE_URL = 'https://oudrcfxkneopgtcfbwhd.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91ZHJjZnhrbmVvcGd0Y2Zid2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNzk0MTYsImV4cCI6MjA5NDY1NTQxNn0.ovAp6X3VogCeyKa74pC3x2f4lKR6m3gkE0kEEhJbGpQ';
+        window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let chartTeacher = null, chartTrainee = null, chartSchedule = null, chartSession = null;
         let globalDataTeacher = {}, globalDataTrainee = {}, globalDataSchedule = {}, globalDataSession = [], globalWeeklyLabels = [];
 
-        const defaultUrls = [
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=1364276211#gid=1364276211",
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=163438723#gid=163438723",
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=0#gid=0"
-        ];
-
-        const setupState = document.getElementById('setupState');
         const dashboardContent = document.getElementById('dashboardContent');
-        const fetchDataBtn = document.getElementById('fetchDataBtn');
-        const hideSetupBtn = document.getElementById('hideSetupBtn');
         const syncIndicator = document.getElementById('syncIndicator');
         const kpiModal = document.getElementById('kpiModal');
         const kpiModalTitle = document.getElementById('kpiModalTitle');
         const kpiModalContent = document.getElementById('kpiModalContent');
-        const inputs = [document.getElementById('url1'), document.getElementById('url2'), document.getElementById('url3')];
         const applyPeriodBtn = document.getElementById('applyPeriodBtn');
         let currentOpenCategory = null;
-
         // 2. Utility Functions
         window.showToast = function (message, isError = false) {
             const container = document.getElementById('toastContainer');
@@ -696,17 +642,6 @@
             return corrected;
         };
 
-        function getCsvUrl(url) {
-            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            const gidMatch = url.match(/gid=([0-9]+)/);
-            if (match) {
-                let csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
-                if (gidMatch) csvUrl += `&gid=${gidMatch[1]}`;
-                csvUrl += `&t=${Date.now()}`;
-                return csvUrl;
-            }
-            return null;
-        }
 
         function getWeekLabel(d) {
             const date = new Date(d);
@@ -726,6 +661,18 @@
             const dd = String(date.getDate()).padStart(2, '0');
             return `${mm}.${dd}`;
         }
+
+        window.getMemoPart = function (statusStr) {
+            if (!statusStr) return "";
+            const segments = statusStr.split(',').map(s => s.trim());
+            const tags = ['1', '결석', '취소', '출석', '휴가'];
+            const memoSegments = segments.filter(seg => {
+                if (/^\d+$/.test(seg)) return false;
+                if (tags.includes(seg)) return false;
+                return true;
+            });
+            return memoSegments.join(', ');
+        };
 
         const isExcludedCondition = (item, name = '') => {
             const kws = ['대상자발굴', '수업준비', '복지관이동', '복지관으로이동', '이동시간', '자체학습'];
@@ -779,7 +726,6 @@
 
         document.getElementById('closeKpiModalBtn').onclick = closeKpiModal;
         document.getElementById('closeKpiModalBtn2').onclick = closeKpiModal;
-        document.getElementById('hideSetupBtn').onclick = () => { setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden'); };
 
         // 4. Date Logic
         window.updateDateDisplay = function (dateInputId, textInputId) {
@@ -909,244 +855,264 @@
             if (el) el.addEventListener('input', () => { window.saveChartFilters(); renderDashboard(); });
         });
 
-        // 6. Parsing & Processing
-        function processSummaryCSV(text) {
+        // 6. Parsing & Processing - Supabase 기반
+        function buildGlobalSummaryData() {
+            // allData에서 날짜별로 통계를 직접 계산하여 globalSummaryData를 구성
             globalSummaryData = [];
-            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
-            const data = results.data;
-            if (!data || data.length < 5) return;
+            const uniqueDates = new Set();
+            allData.forEach(item => { if (item.dateObj) uniqueDates.add(item.dateObj.getTime()); });
 
-            let headerRowIdx = -1;
-            // 💡 날짜 패턴: MM/DD, MM-DD, YYYY/MM/DD 등을 모두 감지
-            const dateRegex = /(\d{4}|\d{1,2})\s*[/.-]\s*(\d{1,2})\s*([/.-]\s*(\d{1,2}))?/;
+            const sortedTimestamps = Array.from(uniqueDates).sort((a, b) => a - b);
+            sortedTimestamps.forEach(ts => {
+                const dateObj = new Date(ts);
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const dateStr = `${mm}.${dd}`;
+                const dStats = prepareDailyData(dateStr);
 
-            for (let i = 0; i < Math.min(10, data.length); i++) {
-                let isDateRow = false;
-                for (let j = 0; j < data[i].length; j++) {
-                    if (data[i][j] && dateRegex.test(data[i][j])) { isDateRow = true; break; }
-                }
-                if (isDateRow) { headerRowIdx = i; break; }
-            }
-            if (headerRowIdx === -1) return;
-
-            const headerRow = data[headerRowIdx];
-            const dateMap = {};
-            const currentYear = new Date().getFullYear();
-
-            for (let j = 1; j < headerRow.length; j++) {
-                const cell = (headerRow[j] || '').trim();
-                if (cell) {
-                    const match = cell.match(dateRegex);
-                    if (match) {
-                        let y, m, d;
-                        if (match[4]) { // YYYY/MM/DD 또는 YY/MM/DD
-                            y = parseInt(match[1]);
-                            if (y < 100) y += 2000;
-                            m = parseInt(match[2]);
-                            d = parseInt(match[4]);
-                        } else { // MM/DD
-                            y = currentYear;
-                            m = parseInt(match[1]);
-                            d = parseInt(match[2]);
-                        }
-                        const dt = new Date(y, m - 1, d);
-                        dt.setHours(0, 0, 0, 0);
-                        if (!isNaN(dt.getTime())) dateMap[j] = dt;
-                    }
-                }
-            }
-
-            const rowMap = {};
-            for (let i = 0; i < data.length; i++) {
-                // B열(1) 또는 A열(0)에서 제목 확인
-                let label = (data[i][1] || data[i][0] || '').toString().replace(/\s+/g, '');
-                if (label) rowMap[label] = i;
-            }
-
-            const getVal = (key, j) => {
-                const cleanKey = key.replace(/\s+/g, '');
-                const rIdx = rowMap[cleanKey];
-                if (rIdx !== undefined && data[rIdx] !== undefined) {
-                    const val = (data[rIdx][j] || '0').toString().replace(/[^0-9.-]/g, '');
-                    const n = parseFloat(val);
-                    return isNaN(n) ? 0 : n;
-                }
-                return 0;
-            };
-
-            for (let j = 1; j < headerRow.length; j++) {
-                if (dateMap[j]) {
-                    globalSummaryData.push({
-                        dateObj: dateMap[j],
-                        teacherAttended: getVal('출근한선생님수', j),
-                        teacherVacation: getVal('휴가인선생님', j),
-                        traineeAttended: getVal('출석자수', j),
-                        traineeAbsent: getVal('결석자수', j),
-                        traineeCancel: getVal('취소자수', j),
-                        traineeVacation: getVal('휴가자수', j),
-                        traineeUnconfirmed: getVal('미확인자수', j),
-                        scheduleCompleted: getVal('완료된수', j),
-                        scheduleUnconfirmed: getVal('미확인된수', j),
-                        session15plus: getVal('15회이상', j),
-                        session8to14: getVal('8~14회', j),
-                        session7minus: getVal('7회이하', j)
-                    });
-                }
-            }
-            console.log(`📊 요약 데이터 파싱 완료: ${globalSummaryData.length}일치`);
+                globalSummaryData.push({
+                    dateObj: dateObj,
+                    teacherAttended: dStats.teacherGroups['출근'] ? dStats.teacherGroups['출근'].length : 0,
+                    teacherVacation: dStats.teacherGroups['휴가'] ? dStats.teacherGroups['휴가'].length : 0,
+                    traineeAttended: dStats.totalAttend || 0,
+                    traineeAbsent: dStats.totalAbsent || 0,
+                    traineeCancel: dStats.totalCancel || 0,
+                    traineeVacation: dStats.totalVacation || 0,
+                    traineeUnconfirmed: dStats.totalUnconfirmed || 0,
+                    scheduleCompleted: dStats.schedCompletedCount || 0,
+                    scheduleUnconfirmed: dStats.schedUnconfCount || 0,
+                    session15plus: dStats.sessionGroups['15회 이상'] ? dStats.sessionGroups['15회 이상'].length : 0,
+                    session8to14: dStats.sessionGroups['8~14회'] ? dStats.sessionGroups['8~14회'].length : 0,
+                    session7minus: dStats.sessionGroups['7회 이하'] ? dStats.sessionGroups['7회 이하'].length : 0
+                });
+            });
+            console.log(`📊 메모리 내 요약 데이터 계산 완료: ${globalSummaryData.length}일치`);
         }
 
-        function processCSVText(text, teamName) {
-            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
-            const data = results.data;
-            let headerRowIndex = -1;
-            for (let i = 0; i < Math.min(10, data.length); i++) {
-                if (data[i] && data[i].length > 3 && data[i][3] && data[i][3].replace(/\s+/g, '') === "구분") { headerRowIndex = i; break; }
-            }
-            if (headerRowIndex === -1) return;
+        // 7. Load & Sync - Supabase 기반
+        async function loadDataFromSupabase(isSilent = false) {
+            if (isFetching) return;
+            isFetching = true;
+            console.log("🚀 Supabase 데이터 로딩 시작");
 
-            const headerRow = data[headerRowIndex];
-            const dateColumns = []; const colDateObjs = {}; const currentYear = new Date().getFullYear();
-            const holidayRow1 = data[headerRowIndex + 1] || [];
-            const holidayRow2 = data[headerRowIndex + 2] || [];
-            for (let j = 4; j < headerRow.length; j++) {
-                if (headerRow[j] && headerRow[j].trim() !== '') {
-                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) ||
-                        (holidayRow2[j] && String(holidayRow2[j]).includes('공휴일'))) {
-                        continue;
-                    }
-                    dateColumns.push({ colIndex: j, dateStr: headerRow[j].trim() });
-                    const match = headerRow[j].trim().match(/(\d+)\s*[\/.]\s*(\d+)/);
-                    if (match) {
-                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
-                        d.setHours(0, 0, 0, 0); colDateObjs[j] = d;
-                    }
+            const syncPopup = document.getElementById('syncPopup');
+            const globalLoader = document.getElementById('globalLoader');
+            const loaderText = document.querySelector('#globalLoader .text-2xl');
+
+            const safetyTimeout = setTimeout(() => {
+                if (globalLoader && !globalLoader.classList.contains('hidden')) {
+                    globalLoader.classList.add('hidden');
+                    isFetching = false;
+                    console.warn("⚠️ 로딩 안전 타임아웃 작동 (60초)");
+                }
+            }, 60000);
+
+            if (isSilent) {
+                if (syncIndicator) syncIndicator.style.opacity = "1";
+                if (syncPopup) { syncPopup.classList.remove('hidden'); syncPopup.classList.add('flex'); }
+            } else {
+                if (globalLoader) {
+                    if (loaderText) loaderText.textContent = "Supabase에서 데이터를 읽고 있습니다...";
+                    globalLoader.classList.remove('hidden'); globalLoader.classList.add('flex');
                 }
             }
 
-            let maxDateInSheet = new Date(0);
-            Object.values(colDateObjs).forEach(d => { if (d > maxDateInSheet) maxDateInSheet = d; });
-            const reportRefDate = maxDateInSheet;
-            const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
+            try {
+                allData = []; globalSummaryData = [];
 
-            const getSessionCount = (targetVal, maxColIndex) => {
-                if (!targetVal || targetVal === "-") return null;
-                let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
-                const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
-                if (names.length === 0) return null;
+                // 1. teachers 정보 로드
+                const { data: teacherList } = await window.supabaseClient
+                    .from('teachers')
+                    .select('name, team, group_name');
 
-                let results = [];
-                names.forEach(searchName => {
-                    if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
+                const teacherGroupMap = {};
+                if (teacherList) {
+                    teacherList.forEach(t => {
+                        if (!teacherGroupMap[t.team]) teacherGroupMap[t.team] = {};
+                        teacherGroupMap[t.team][t.name] = t.group_name;
+                    });
+                }
 
-                    let count = 0;
-                    for (let j = 4; j <= maxColIndex; j++) {
-                        let colDate = colDateObjs[j];
-                        if (!colDate) continue;
+                // 2. daily_logs 전체 데이터 로드 (팀별 페이지네이션)
+                const teamNames = ["1팀", "2팀", "3팀"];
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-                        let foundStatuses = [];
-                        for (let i = headerRowIndex + 1; i < data.length; i++) {
-                            if (!data[i] || data[i].length < 2) continue;
-                            let isNewTBlock = (data[i].length > 1 && data[i][1] && data[i][1].trim() !== '');
-                            const cat = (data[i].length > 3 && data[i][3]) ? data[i][3].replace(/\s+/g, '') : "";
+                const fetchTeamRecords = async (teamName) => {
+                    let teamRecords = [];
+                    let from = 0;
+                    const step = 1000;
+                    let hasMore = true;
+                    while (hasMore) {
+                        const { data, error } = await window.supabaseClient
+                            .from('daily_logs')
+                            .select('*')
+                            .eq('team', teamName)
+                            .neq('student', '')
+                            .not('student', 'is', null)
+                            .lte('log_date', todayStr)
+                            .order('log_date', { ascending: false })
+                            .range(from, from + step - 1);
+                        if (error) throw error;
+                        if (data && data.length > 0) {
+                            teamRecords = teamRecords.concat(data);
+                            hasMore = data.length === step;
+                            from += step;
+                        } else { hasMore = false; }
+                    }
+                    return teamRecords;
+                };
 
-                            if (cat === "대상" || cat === "내용" || cat === "활동" || (!cat && isNewTBlock)) {
-                                let statusRow = null;
-                                if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes("진행여부")) statusRow = data[i + 1];
-                                else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes("진행여부")) statusRow = data[i + 2];
+                const results = await Promise.all(teamNames.map(t => fetchTeamRecords(t)));
+                let records = [];
+                results.forEach(r => { if (r) records = records.concat(r); });
 
-                                const cellStudent = data[i][j] ? data[i][j].trim() : "";
-                                const cellStatus = (statusRow && statusRow[j]) ? statusRow[j].trim() : "";
-                                const cellNames = cellStudent.split(/[/,]/).map(s => s.trim().split('(')[0].trim()).filter(Boolean);
-                                const nameIdx = cellNames.indexOf(searchName);
+                // 3. 학생별 누적 출석 일자 계산 (Pre-compute)
+                const studentSessionMap = new Map();
+                const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
 
-                                if (nameIdx !== -1) {
-                                    let finalStatus = cellStatus;
-                                    if (cellNames.length > 1 && cellStatus.includes('/')) {
-                                        const rawParts = cellStatus.split(',');
-                                        const firstPart = rawParts[0];
-                                        const slashSegments = firstPart.split('/');
-                                        if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
-                                            const myTag = slashSegments[nameIdx].trim();
-                                            const memoPart = rawParts.slice(1).join(',').trim();
-                                            finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
-                                        }
-                                    }
-                                    foundStatuses.push(finalStatus);
-                                }
+                records.forEach(row => {
+                    const studentVal = row.student || "";
+                    if (!studentVal || studentVal === "-") return;
+                    let cleanTarget = studentVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+
+                    names.forEach((searchName, nameIdx) => {
+                        if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
+
+                        let finalStatus = row.status || "";
+                        if (names.length > 1 && finalStatus.includes('/')) {
+                            const rawParts = finalStatus.split(',');
+                            const slashSegments = rawParts[0].split('/');
+                            if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
+                                const myTag = slashSegments[nameIdx].trim();
+                                const memoPart = rawParts.slice(1).join(',').trim();
+                                finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
                             }
                         }
 
                         let hasSessionOnThisDay = false;
-                        if (foundStatuses.length > 0) {
-                            const nonEmpty = foundStatuses.filter(s => s !== "");
-                            const statusesToEval = nonEmpty.length > 0 ? nonEmpty : foundStatuses;
-                            const hasAbsence = statusesToEval.some(s => { return s.split(',')[0].trim().includes("결석"); });
-                            if (hasAbsence) { hasSessionOnThisDay = false; } else {
-                                const hasNumber = statusesToEval.some(s => { return /^[1-9]\d*/.test(s.split(',')[0].trim()); });
-                                if (hasNumber) { hasSessionOnThisDay = true; } else {
-                                    const isCanceled = statusesToEval.some(s => { return s.split(',')[0].trim().includes("취소") || s.split(',')[0].trim().includes("선생님휴가") || s.split(',')[0].trim().includes("휴가"); });
-                                    if (isCanceled) { hasSessionOnThisDay = false; } else if (colDate < realToday) { hasSessionOnThisDay = true; } else { hasSessionOnThisDay = false; }
+                        const tagPart = finalStatus.split(',')[0].trim();
+                        if (finalStatus !== "") {
+                            if (tagPart.includes("결석")) {
+                                hasSessionOnThisDay = false;
+                            } else if (/^[1-9]\d*/.test(tagPart)) {
+                                hasSessionOnThisDay = true;
+                            } else {
+                                const hasVacationMemo = (row.status || "").replace(/\s+/g, '').includes('선생님휴가');
+                                if (tagPart.includes("취소") || ((tagPart.includes("선생님휴가") || tagPart.includes("휴가")) && hasVacationMemo)) {
+                                    hasSessionOnThisDay = false;
+                                } else {
+                                    const logDate = new Date(row.log_date); logDate.setHours(0, 0, 0, 0);
+                                    hasSessionOnThisDay = logDate < realToday;
                                 }
                             }
                         }
-                        if (hasSessionOnThisDay) count++;
-                    }
-                    if (count > 0) results.push({ name: searchName, count: count });
-                });
-                return results.length > 0 ? results : null;
-            };
 
-            let currentGroup = '-'; let currentTeacherName = '이름없음'; let currentTime = '-';
-            for (let i = headerRowIndex + 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length < 2) continue;
-                let isNewTeacherBlock = false;
-                if (row[0] && row[0].trim() !== '') currentGroup = row[0].trim();
-                if (row[1] && row[1].trim() !== '') { currentTeacherName = window.autoCorrectText(row[1].trim()); isNewTeacherBlock = true; }
-                if (row[2] && row[2].trim() !== '') currentTime = row[2].trim();
-                const category = (row.length > 3 && row[3]) ? row[3].replace(/\s+/g, '') : '';
-                const isTargetRow = category === "대상" || category === "내용" || category === "활동" || (isNewTeacherBlock && category !== "장소" && !category.includes("진행여부"));
-
-                if (isTargetRow) {
-                    let locationRow = null; let statusRow = null;
-                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].replace(/\s+/g, '') === '장소') locationRow = data[i + 1];
-                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes('진행여부')) statusRow = data[i + 1];
-                    else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes('진행여부')) statusRow = data[i + 2];
-
-                    const lastColIndex = dateColumns.length > 0 ? dateColumns[dateColumns.length - 1].colIndex : (headerRow.length - 1);
-
-                    dateColumns.forEach(dateInfo => {
-                        const colIdx = dateInfo.colIndex;
-                        let statusStr = (statusRow && statusRow.length > colIdx && statusRow[colIdx]) ? statusRow[colIdx].trim() : "";
-                        statusStr = window.autoCorrectText(statusStr);
-
-                        let safeStatusStr = String(statusStr).replace(/\s+/g, '');
-                        let teacherAttended = !safeStatusStr.includes('선생님휴가');
-                        let isAttended = false; let traineeCount = 0;
-                        if (statusStr) {
-                            const safeStatus = statusStr.replace(/\s+/g, '');
-                            if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || safeStatus.includes('휴가'))) {
-                                const match = safeStatus.match(/^(\d+)/);
-                                if (match) { isAttended = true; traineeCount = parseInt(match[1], 10); }
-                            }
+                        if (hasSessionOnThisDay) {
+                            if (!studentSessionMap.has(searchName)) studentSessionMap.set(searchName, new Map());
+                            const dateObj = new Date(row.log_date); dateObj.setHours(0, 0, 0, 0);
+                            studentSessionMap.get(searchName).set(row.log_date, dateObj);
                         }
-
-                        const cellVal = (row.length > colIdx && row[colIdx]) ? row[colIdx].trim() : "";
-                        const targetVal = cellVal === "" ? "-" : window.autoCorrectText(cellVal);
-                        const sessionCounts = getSessionCount(targetVal, lastColIndex);
-
-                        allData.push({
-                            team: teamName, group: currentGroup, date: dateInfo.dateStr, dateObj: colDateObjs[colIdx],
-                            name: currentTeacherName, time: currentTime, target: targetVal,
-                            status: statusStr || "", isAttended, traineeCount, teacherAttended,
-                            location: (locationRow && locationRow.length > colIdx) ? window.autoCorrectText(locationRow[colIdx].trim()) : "-",
-                            sessionCounts: sessionCounts, originalIndex: allData.length
-                        });
                     });
+                });
+
+                // 4. records를 allData 포맷으로 변환
+                const currentYear = new Date().getFullYear();
+                records.forEach(row => {
+                    const logDate = new Date(row.log_date);
+                    const mm = String(logDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(logDate.getDate()).padStart(2, '0');
+                    const dateStr = `${mm}.${dd}`;
+
+                    let group = "-";
+                    if (teacherGroupMap[row.team] && teacherGroupMap[row.team][row.teacher]) {
+                        group = teacherGroupMap[row.team][row.teacher];
+                    }
+
+                    const targetVal = row.student || "-";
+                    let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+
+                    const sessionCounts = [];
+                    names.forEach(searchName => {
+                        const dateMap = studentSessionMap.get(searchName);
+                        if (dateMap) {
+                            const datesArr = Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime());
+                            sessionCounts.push({ name: searchName, count: datesArr.length, dates: datesArr });
+                        }
+                    });
+
+                    const statusStr = window.autoCorrectText(row.status || "");
+                    const safeStatusStr = statusStr.replace(/\s+/g, '');
+                    const hasVacationMemo = (statusStr || "").replace(/\s+/g, '').includes('선생님휴가');
+                    const teacherAttended = !((safeStatusStr.includes('선생님휴가') || safeStatusStr.includes('휴가')) && hasVacationMemo);
+
+                    let isAttended = false; let traineeCount = 0;
+                    if (statusStr) {
+                        const safeStatus = statusStr.replace(/\s+/g, '');
+                        if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || ((safeStatus.includes('선생님휴가') || safeStatus.includes('휴가')) && hasVacationMemo) || ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴'].some(kw => safeStatus.includes(kw)))) {
+                            const match = safeStatus.match(/^(\d+)/);
+                            if (match) { isAttended = true; traineeCount = parseInt(match[1], 10); }
+                        }
+                    }
+
+                    const logDateObj = new Date(row.log_date); logDateObj.setHours(0, 0, 0, 0);
+
+                    allData.push({
+                        team: row.team, group: group, date: dateStr, dateObj: logDateObj,
+                        name: window.autoCorrectText(row.teacher || "이름없음"),
+                        time: row.shift || "",
+                        target: window.autoCorrectText(targetVal),
+                        status: statusStr, isAttended, traineeCount, teacherAttended,
+                        location: window.autoCorrectText(row.location || "-"),
+                        sessionCounts: sessionCounts.length > 0 ? sessionCounts : null,
+                        originalIndex: allData.length
+                    });
+                });
+
+                console.log(`✅ Supabase 데이터 로드 완료: ${allData.length}건`);
+
+                // 5. 메모리 내 요약 통계 계산
+                if (allData.length > 0) {
+                    if (loaderText && !isSilent) loaderText.textContent = "통계 데이터를 계산 중입니다...";
+                    buildGlobalSummaryData();
+                }
+
+                const hasData = allData.length > 0 || globalSummaryData.length > 0;
+                if (!isDatesInitialized && hasData) { initializeDates(); isDatesInitialized = true; }
+
+                if (!hasData) {
+                    dashboardContent.classList.add('hidden');
+                    document.getElementById('periodNavigation').classList.add('hidden');
+                } else {
+                    dashboardContent.classList.remove('hidden');
+                    document.getElementById('periodNavigation').classList.remove('hidden');
+                    console.log("🎨 대시보드 렌더링 시작");
+                    try { renderDashboard(); } catch (e) {
+                        console.error("❌ renderDashboard 오류:", e);
+                        window.showToast("대시보드 화면 생성 중 오류가 발생했습니다.", true);
+                    }
+                }
+            } catch (error) {
+                console.error("데이터 로딩 중 오류 발생:", error);
+                window.showToast("데이터를 불러오는 중 오류가 발생했습니다.", true);
+            } finally {
+                clearTimeout(safetyTimeout);
+                isFetching = false;
+                console.log("🔚 데이터 로딩 프로세스 종료");
+                if (isSilent) {
+                    setTimeout(() => {
+                        if (syncIndicator) syncIndicator.style.opacity = "0";
+                        if (syncPopup) { syncPopup.classList.add('hidden'); syncPopup.classList.remove('flex'); }
+                    }, 500);
+                } else {
+                    if (globalLoader) { globalLoader.classList.add('hidden'); globalLoader.classList.remove('flex'); }
                 }
             }
         }
+
+        // 8. Render Helpers
 
         function prepareDailyData(targetDateStr) {
             let dailyData = allData.filter(item => item.date === targetDateStr);
@@ -1174,7 +1140,8 @@
                     teacherVisibilityMap.set(tKey, true);
                 } else {
                     if (tText !== '-' && tText !== '') teacherVisibilityMap.set(tKey, true);
-                    if (sText.includes('휴가')) teacherVisibilityMap.set(tKey, true);
+                    const hasVacationMemo = (item.status || "").replace(/\s+/g, '').includes('선생님휴가');
+                    if ((sText.includes('휴가') || sText.includes('선생님휴가')) && hasVacationMemo) teacherVisibilityMap.set(tKey, true);
                 }
             });
             dailyData = dailyData.filter(item => teacherVisibilityMap.get(`${item.team}|${item.group}|${item.name}`));
@@ -1197,13 +1164,15 @@
                 if (cleanTeacher !== '천은선서승희') {
                     if (!teacherStatusMap.has(item.name)) {
                         let rStat = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
-                        let isVac = rStat.replace(/\s+/g, '').includes('선생님휴가') || isMandatoryDay;
+                        const hasVacationMemo = (rStat || "").replace(/\s+/g, '').includes('선생님휴가');
+                        let isVac = ((rStat.replace(/\s+/g, '').includes('선생님휴가') || rStat.replace(/\s+/g, '').includes('휴가')) && hasVacationMemo);
                         teacherStatusMap.set(item.name, { item: item, status: isVac ? '휴가' : '출근' });
                     }
                     let tData = teacherStatusMap.get(item.name);
                     let rStat = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
                     const checkStr = rStat.replace(/\s+/g, '');
-                    if (checkStr.includes('선생님휴가') || checkStr.includes('선생님 휴가')) tData.status = '휴가';
+                    const hasVacationMemo = (rStat || "").replace(/\s+/g, '').includes('선생님휴가');
+                    if ((checkStr.includes('선생님휴가') || checkStr.includes('선생님 휴가') || checkStr.includes('휴가')) && hasVacationMemo) tData.status = '휴가';
                 }
             });
 
@@ -1255,7 +1224,7 @@
                             const parts = tagPart.split('/');
                             parts.forEach(p => {
                                 if (p.includes("취소")) stat_sCancel++;
-                                else if (p.includes("휴가")) stat_sVacation++;
+                                else if (p.includes("휴가") && (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가')) stat_sVacation++;
                                 else if (p.includes("결석")) stat_sAbsent++;
                                 else {
                                     const match = p.match(/\d+/);
@@ -1273,7 +1242,8 @@
                             const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
                             let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
                             let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
-                            let countVacationStr = (stat_pStr.match(/휴가/g) || []).length;
+                            const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                            let countVacationStr = hasVacationMemo ? (stat_pStr.match(/휴가/g) || []).length : 0;
 
                             if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
                                 if (stat_sCount === 1) {
@@ -1291,7 +1261,7 @@
                                 stat_sAbsent = countAbsentStr; stat_sVacation = countVacationStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sVacation);
                             } else if (stat_pStr.includes("결석")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
-                            } else if (stat_pStr.includes("휴가")) {
+                            } else if (stat_pStr.includes("휴가") && hasVacationMemo) {
                                 if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sVacation = stat_sCount === 1 ? 1 : stat_sCount - 1; }
                                 else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sVacation = stat_sCount - firstNum; } else { stat_sVacation = stat_sCount; }
                             } else if (stat_pStr.includes("취소")) {
@@ -1523,11 +1493,12 @@
 
                 if (!isDatesInitialized && hasData) { initializeDates(); isDatesInitialized = true; }
 
-                if (allData.length === 0 && globalSummaryData.length === 0) {
-                    setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden');
+                const hasSummaryData = allData.length > 0 || globalSummaryData.length > 0;
+                if (!hasSummaryData) {
+                    dashboardContent.classList.add('hidden');
                     document.getElementById('periodNavigation').classList.add('hidden');
                 } else {
-                    setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
+                    dashboardContent.classList.remove('hidden');
                     document.getElementById('periodNavigation').classList.remove('hidden');
                     console.log("🎨 대시보드 렌더링 시작");
                     try {
@@ -1784,12 +1755,14 @@
                     const teacherKey = `${item.date}|${item.name}`;
                     if (!teacherStatusMap.has(teacherKey)) {
                         let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
-                        let isVac = rawStatus.replace(/\s+/g, '').includes('선생님휴가') || mandatoryDates.has(item.date);
+                        const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                        let isVac = ((rawStatus.replace(/\s+/g, '').includes('선생님휴가') || rawStatus.replace(/\s+/g, '').includes('휴가')) && hasVacationMemo);
                         teacherStatusMap.set(teacherKey, { item: item, status: isVac ? '휴가' : '출근' });
                     }
                     let tData = teacherStatusMap.get(teacherKey);
                     let rawStatus = (item.status && item.status.trim() !== '-') ? item.status.trim() : '';
-                    if (rawStatus.replace(/\s+/g, '').includes('선생님휴가')) tData.status = '휴가';
+                    const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                    if ((rawStatus.replace(/\s+/g, '').includes('선생님휴가') || rawStatus.replace(/\s+/g, '').includes('휴가')) && hasVacationMemo) tData.status = '휴가';
                 }
             });
 
@@ -1836,7 +1809,7 @@
                             const parts = tagPart.split('/');
                             parts.forEach(p => {
                                 if (p.includes("취소")) stat_sCancel++;
-                                else if (p.includes("휴가")) stat_sVacation++;
+                                else if (p.includes("휴가") && (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가')) stat_sVacation++;
                                 else if (p.includes("결석")) stat_sAbsent++;
                                 else {
                                     const match = p.match(/\d+/);
@@ -1854,7 +1827,8 @@
                             const match = stat_pStr.match(/\d+/); const firstNum = match ? parseInt(match[0], 10) : 0;
                             let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
                             let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
-                            let countVacationStr = (stat_pStr.match(/휴가/g) || []).length;
+                            const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                            let countVacationStr = hasVacationMemo ? (stat_pStr.match(/휴가/g) || []).length : 0;
 
                             if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
                                 if (stat_sCount === 1) {
@@ -1872,7 +1846,7 @@
                                 stat_sAbsent = countAbsentStr; stat_sVacation = countVacationStr; stat_sAttend = Math.max(0, stat_sCount - stat_sAbsent - stat_sVacation);
                             } else if (stat_pStr.includes("결석")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; } else { stat_sAbsent = stat_sCount; }
-                            } else if (stat_pStr.includes("휴가")) {
+                            } else if (stat_pStr.includes("휴가") && hasVacationMemo) {
                                 if (/^1/.test(stat_pStr.trim())) { stat_sAttend = 1; stat_sVacation = stat_sCount === 1 ? 1 : stat_sCount - 1; }
                                 else if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sVacation = stat_sCount - firstNum; } else { stat_sVacation = stat_sCount; }
                             } else if (stat_pStr.includes("취소")) {
@@ -1959,7 +1933,7 @@
                             if (nameIdx !== -1 && nameIdx < parts.length) {
                                 const myStatus = parts[nameIdx];
                                 if (myStatus.includes('취소')) studentStatus = '취소';
-                                else if (myStatus.includes('휴가')) studentStatus = '휴가';
+                                else if (myStatus.includes('휴가') && (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가')) studentStatus = '휴가';
                                 else if (myStatus.includes('결석')) studentStatus = '결석';
                                 else if (/\d/.test(myStatus)) studentStatus = '출석';
                                 else if (myStatus !== "") studentStatus = '미확인';
@@ -2342,7 +2316,7 @@
                 if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-1 w-full mb-1.5">${allBtnsHtml}</div>`;
                 if (filterStr === '미확인' && topRowBtns === '') return '';
 
-                let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                let timeHtml = (item.time && item.time !== '-') ? `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>` : '';
                 let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
                 if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
                 let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
@@ -2748,27 +2722,16 @@
 
         // 10. Init Event Listeners
         document.getElementById('applyPeriodBtn').addEventListener('click', async () => {
-            // 구글 시트에서 최신 데이터를 다시 받아온 뒤 통계 재계산 → renderDashboard()는 내부에서 자동 호출됨
-
-            // 구글 시트에서 최신 데이터를 다시 받아온 뒤 통계 재계산 → renderDashboard()는 내부에서 자동 호출됨
-            const savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
-            await loadDataFromGoogleSheets(savedUrls, true);
-        });
-        document.getElementById('fetchDataBtn').addEventListener('click', () => {
-            const currentUrls = inputs.map(i => i.value.trim());
-            if (currentUrls.every(url => url === '')) return;
-            localStorage.setItem('googleSheetUrls', JSON.stringify(currentUrls));
-            loadDataFromGoogleSheets(currentUrls, false);
-            setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden');
-            startAutoSync();
+            // Supabase에서 최신 데이터를 다시 받아온 뒤 통계 재계산 → renderDashboard()는 내부에서 자동 호출됨
+            await loadDataFromSupabase(true);
         });
         window.addEventListener('DOMContentLoaded', () => {
             window.loadChartFilters();
-            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
-            inputs[0].value = savedUrls[0] || ''; inputs[1].value = savedUrls[1] || ''; inputs[2].value = savedUrls[2] || '';
-            if (savedUrls.some(url => url.trim() !== '')) { loadDataFromGoogleSheets(savedUrls, false); startAutoSync(); }
-            else { setupState.classList.remove('hidden'); dashboardContent.classList.add('hidden'); }
+            loadDataFromSupabase(false);
+            // 5분마다 자동 동기화
+            setInterval(() => { if (!document.hidden && !isFetching) loadDataFromSupabase(true); }, 300000);
         });
+
     </script>
 </body>
 

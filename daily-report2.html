@@ -7,6 +7,13 @@
     <title>일별 교육 진행 현황</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        window.addEventListener('error', function (e) {
+            alert("⚠️ JS 오류 발생: " + e.message + "\n위치: " + e.filename + ":" + e.lineno);
+        });
+    </script>
 
     <style>
         ::-webkit-scrollbar {
@@ -133,7 +140,7 @@
                         onerror="this.style.display='none'">
                     <h1
                         class="font-bold text-[clamp(11px,2.5vw,36px)] leading-tight whitespace-nowrap shrink min-w-0 truncate drop-shadow-md text-slate-100">
-                        성동노인종합복지관</h1>
+                        성동노인종합복지관<sub class="text-[0.38em] font-black align-baseline ml-0.5 text-gray-400 relative bottom-[1px]">DB</sub></h1>
                 </div>
                 <p
                     class="font-bold text-yellow-300 text-[clamp(14px,2.6vw,36px)] whitespace-nowrap leading-none shrink min-w-0 truncate drop-shadow-sm">
@@ -224,45 +231,6 @@
     </header>
 
     <div class="w-[99.5%] max-w-none mx-auto space-y-[clamp(6px,0.8vw,12px)] px-1">
-        <div id="setupState"
-            class="hidden bg-slate-900/60 backdrop-blur-xl p-[clamp(32px,3vw,48px)] rounded-xl 2xl:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col items-center justify-center min-h-[400px]">
-            <div class="max-w-2xl 2xl:max-w-5xl w-full">
-                <h2
-                    class="font-bold text-slate-100 mb-[clamp(16px,2vw,24px)] text-center text-[clamp(24px,3vw,48px)] tracking-tight">
-                    구글 시트 연동 설정</h2>
-                <div class="space-y-[clamp(16px,2vw,32px)] mb-8">
-                    <div
-                        class="bg-indigo-900/40 border border-indigo-500/30 text-indigo-200 p-4 rounded-xl text-[clamp(13px,1.2vw,16px)] leading-relaxed shadow-sm backdrop-blur-md">
-                        <p class="font-bold mb-1 flex items-center gap-2"><span class="text-xl">💡</span> 구글 시트 접근 권한을 꼭
-                            확인해주세요!</p>
-                        <p class="opacity-90">각 구글 시트 우측 상단의 <b>[공유]</b> 버튼을 눌러 일반 액세스를 <b>'링크가 있는 모든 사용자(뷰어)'</b>로
-                            변경해야만 데이터를 성공적으로 불러올 수 있습니다.</p>
-                    </div>
-                    <div>
-                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">1팀 주소</label>
-                        <input type="text" id="url1"
-                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">2팀 주소</label>
-                        <input type="text" id="url2"
-                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
-                    </div>
-                    <div>
-                        <label class="block font-medium text-slate-300 mb-1 text-[clamp(14px,1.5vw,24px)]">3팀 주소</label>
-                        <input type="text" id="url3"
-                            class="w-full bg-slate-800/80 border border-slate-600 text-slate-100 rounded-lg p-[clamp(8px,1vw,16px)] text-[clamp(16px,1.2vw,20px)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
-                    </div>
-                </div>
-                <div class="flex justify-center gap-4">
-                    <button id="fetchDataBtn"
-                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[clamp(16px,1.5vw,24px)] shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all font-bold">저장
-                        및 업데이트</button>
-                    <button id="hideSetupBtn"
-                        class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-[clamp(16px,1.5vw,24px)] transition-all border border-slate-600">닫기</button>
-                </div>
-            </div>
-        </div>
 
         <div id="dashboardContent" class="space-y-[clamp(8px,1vw,16px)] pb-4">
 
@@ -512,6 +480,18 @@
             return corrected;
         };
 
+        window.getMemoPart = function (statusStr) {
+            if (!statusStr) return "";
+            const segments = statusStr.split(',').map(s => s.trim());
+            const tags = ['1', '결석', '취소', '출석', '휴가'];
+            const memoSegments = segments.filter(seg => {
+                if (/^\d+$/.test(seg)) return false;
+                if (tags.includes(seg)) return false;
+                return true;
+            });
+            return memoSegments.join(', ');
+        };
+
         let allData = [];
         let isFetching = false;
         let currentDateObj = new Date();
@@ -521,16 +501,39 @@
         if (currentDateObj.getDay() === 6) currentDateObj.setDate(currentDateObj.getDate() + 2);
         else if (currentDateObj.getDay() === 0) currentDateObj.setDate(currentDateObj.getDate() + 1);
 
-        const defaultUrls = [
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=1364276211#gid=1364276211",
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=163438723#gid=163438723",
-            "https://docs.google.com/spreadsheets/d/1OGgUGdy8j512kw6kMRFo-gMs0ArS9T6F5ZjCVA4a0mo/edit?gid=0#gid=0"
-        ];
+        const SUPABASE_URL = 'https://oudrcfxkneopgtcfbwhd.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91ZHJjZnhrbmVvcGd0Y2Zid2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNzk0MTYsImV4cCI6MjA5NDY1NTQxNn0.ovAp6X3VogCeyKa74pC3x2f4lKR6m3gkE0kEEhJbGpQ';
+        window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const TEACHER_GROUPS = {
+            "1팀": {
+                "김종철": "1조", "이근홍": "1조",
+                "김성수": "2조", "이혜섭": "2조",
+                "이성호": "3조", "김영송": "3조",
+                "권오삼": "4조", "육수영": "4조",
+                "천은선": "5조", "서승희": "5조"
+            },
+            "2팀": {
+                "표영": "1조", "주청자": "1조",
+                "김겸숙": "2조", "이광범": "2조",
+                "박정숙": "3조", "백응현": "3조",
+                "권용의": "4조", "김향숙": "4조"
+            },
+            "3팀": {
+                "강계환": "1조", "박선화": "1조",
+                "윤성배": "2조", "천은선": "2조",
+                "이근수": "3조", "서승희": "3조",
+                "이현숙": "4조", "김용하": "4조",
+                "강미영": "5조", "김금미": "5조"
+            },
+            "취업팀": {
+                "이수인": "오전", "강유정": "오전",
+                "전성주": "오후", "차미혜": "오후"
+            }
+        };
 
         const setupState = document.getElementById('setupState');
         const dashboardContent = document.getElementById('dashboardContent');
-        const fetchDataBtn = document.getElementById('fetchDataBtn');
-        const hideSetupBtn = document.getElementById('hideSetupBtn');
         const syncIndicator = document.getElementById('syncIndicator');
         const dateNavigation = document.getElementById('dateNavigation');
         const currentDateDisplay = document.getElementById('currentDateDisplay');
@@ -539,7 +542,6 @@
         const kpiModalTitle = document.getElementById('kpiModalTitle');
         const kpiModalContent = document.getElementById('kpiModalContent');
         const wordCloudContainer = document.getElementById('wordCloudContainer');
-        const inputs = [document.getElementById('url1'), document.getElementById('url2'), document.getElementById('url3')];
         const refreshDataBtn = document.getElementById('refreshDataBtn');
         const globalLoader = document.getElementById('globalLoader');
 
@@ -599,9 +601,10 @@
             const data = window.scheduleDetailsMap[uid];
             if (!data) return;
 
-            let tDisp = data.target === '-' || data.target === '' ? '대상자 없음' : data.target;
-            let cleanTDispForCheck = tDisp.replace(/\s+/g, '');
-            let isHideBadges = tDisp === '대상자 없음' || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습');
+            let isEmptyTarget = data.target === '-' || data.target === '';
+            let tDisp = isEmptyTarget ? '' : data.target;
+            let cleanTDispForCheck = (data.target || '').replace(/\s+/g, '');
+            let isHideBadges = isEmptyTarget || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습');
 
             let statusBadge = '';
             if (!data.isExcluded && !isHideBadges) {
@@ -639,7 +642,7 @@
                 <div class="space-y-[clamp(12px,1.5vw,16px)] pt-2 text-[clamp(16px,1.5vw,20px)]">
                     <div class="flex flex-col gap-1">
                         <span class="text-[clamp(12px,1.2vw,16px)] font-bold text-indigo-400">대상자</span>
-                        <div class="font-black text-slate-200 flex items-center flex-wrap gap-2"><span class="text-[clamp(18px,1.8vw,24px)]">${data.target !== '-' && data.target !== '' ? data.target : '대상자 없음'}</span></div>
+                        <div class="font-black text-slate-200 flex items-center flex-wrap gap-2"><span class="text-[clamp(18px,1.8vw,24px)]">${data.target !== '-' && data.target !== '' ? data.target : ''}</span></div>
                     </div>
                     <div class="flex flex-col gap-1">
                         <span class="text-[clamp(12px,1.2vw,16px)] font-bold text-indigo-400">장소</span>
@@ -674,8 +677,6 @@
         document.getElementById('closeKpiModalBtn').onclick = closeKpiModal;
         document.getElementById('closeKpiModalBtn2').onclick = closeKpiModal;
 
-        // 설정 버튼 관련 기능이 필요 없어짐에 따라 관련 코드 정리
-        hideSetupBtn.onclick = () => { setupState.classList.add('hidden'); dashboardContent.classList.remove('hidden'); };
 
         window.toggleSection = function (contentId, iconId) {
             const content = document.getElementById(contentId);
@@ -735,233 +736,15 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
-            inputs[0].value = savedUrls[0] || ''; inputs[1].value = savedUrls[1] || ''; inputs[2].value = savedUrls[2] || '';
-            if (savedUrls.some(url => url.trim() !== '')) {
-                loadDataFromGoogleSheets(savedUrls, false, true);
-                setInterval(() => { if (!document.hidden && !isFetching) loadDataFromGoogleSheets(savedUrls, true, false); }, 300000);
-            } else {
-                setupState.classList.remove('hidden');
-                dashboardContent.classList.add('hidden');
-            }
-        });
-
-        fetchDataBtn.addEventListener('click', () => {
-            const currentUrls = inputs.map(i => i.value.trim());
-            if (currentUrls.every(url => url === '')) return;
-            localStorage.setItem('googleSheetUrls', JSON.stringify(currentUrls));
-            loadDataFromGoogleSheets(currentUrls, false, true);
-            setupState.classList.add('hidden');
-            dashboardContent.classList.remove('hidden');
+            loadDataFromSupabase(false, true);
+            setInterval(() => { if (!document.hidden && !isFetching) loadDataFromSupabase(true, false); }, 300000);
         });
 
         refreshDataBtn.onclick = () => {
-            let savedUrls = JSON.parse(localStorage.getItem('googleSheetUrls')) || defaultUrls;
-            if (savedUrls.some(url => url.trim() !== '')) {
-                loadDataFromGoogleSheets(savedUrls, false, false);
-            }
+            loadDataFromSupabase(false, false);
         };
 
-        function getCsvUrl(url) {
-            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            const gidMatch = url.match(/gid=([0-9]+)/);
-            if (match) {
-                let csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
-                if (gidMatch) csvUrl += `&gid=${gidMatch[1]}`;
-                csvUrl += `&t=${Date.now()}`;
-                return csvUrl;
-            }
-            return null;
-        }
-
-        function processCSVText(text, teamName) {
-            const results = Papa.parse(text, { header: false, skipEmptyLines: true });
-            const data = results.data;
-            let headerRowIndex = -1;
-            for (let i = 0; i < Math.min(10, data.length); i++) {
-                if (data[i] && data[i].length > 3 && data[i][3] && data[i][3].replace(/\s+/g, '') === "구분") {
-                    headerRowIndex = i; break;
-                }
-            }
-            if (headerRowIndex === -1) return;
-
-            const headerRow = data[headerRowIndex];
-            const dateColumns = [];
-            const colDateObjs = {};
-            const currentYear = new Date().getFullYear();
-
-            const holidayRow1 = data[headerRowIndex + 1] || [];
-            const holidayRow2 = data[headerRowIndex + 2] || [];
-
-            for (let j = 4; j < headerRow.length; j++) {
-                if (headerRow[j] && headerRow[j].trim() !== '') {
-                    if ((holidayRow1[j] && String(holidayRow1[j]).includes('공휴일')) ||
-                        (holidayRow2[j] && String(holidayRow2[j]).includes('공휴일'))) {
-                        continue;
-                    }
-                    dateColumns.push({ colIndex: j, dateStr: headerRow[j].trim() });
-                    const match = headerRow[j].trim().match(/(\d+)\s*[\/.]\s*(\d+)/);
-                    if (match) {
-                        const d = new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
-                        d.setHours(0, 0, 0, 0);
-                        colDateObjs[j] = d;
-                    }
-                }
-            }
-
-            const realToday = new Date(); realToday.setHours(0, 0, 0, 0);
-
-            // ✅ 학생별 진행 상태(출결) 및 날짜 목록 저장 로직
-            const getSessionCount = (targetVal, maxColIndex) => {
-                if (!targetVal || targetVal === "-") return null;
-                let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
-                const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
-                if (names.length === 0) return null;
-
-                let results = [];
-
-                names.forEach(searchName => {
-                    if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
-
-                    let count = 0;
-                    let attendedDatesForStudent = []; // 개별 학생 출결 날짜 기록 배열
-
-                    for (let j = 4; j <= maxColIndex; j++) {
-                        let colDate = colDateObjs[j];
-                        if (!colDate) continue;
-
-                        let foundStatuses = [];
-                        for (let i = headerRowIndex + 1; i < data.length; i++) {
-                            if (!data[i] || data[i].length < 2) continue;
-                            let isNewTBlock = (data[i].length > 1 && data[i][1] && data[i][1].trim() !== '');
-                            const cat = (data[i].length > 3 && data[i][3]) ? data[i][3].replace(/\s+/g, '') : "";
-
-                            if (cat === "대상" || cat === "내용" || cat === "활동" || (!cat && isNewTBlock)) {
-                                let statusRow = null;
-                                if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes("진행여부")) statusRow = data[i + 1];
-                                else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes("진행여부")) statusRow = data[i + 2];
-
-                                const cellStudent = data[i][j] ? data[i][j].trim() : "";
-                                const cellStatus = (statusRow && statusRow[j]) ? statusRow[j].trim() : "";
-
-                                const cellNames = cellStudent.split(/[/,]/).map(s => s.trim().split('(')[0].trim()).filter(Boolean);
-                                const nameIdx = cellNames.indexOf(searchName);
-
-                                // `/` 로 엮여있는 복수 학생 중 자신의 상태만 분리하여 추출
-                                if (nameIdx !== -1) {
-                                    let finalStatus = cellStatus;
-                                    if (cellNames.length > 1 && cellStatus.includes('/')) {
-                                        const rawParts = cellStatus.split(',');
-                                        const firstPart = rawParts[0];
-                                        const slashSegments = firstPart.split('/');
-
-                                        if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
-                                            const myTag = slashSegments[nameIdx].trim();
-                                            const memoPart = rawParts.slice(1).join(',').trim();
-                                            finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
-                                        }
-                                    }
-                                    foundStatuses.push(finalStatus);
-                                }
-                            }
-                        }
-
-                        let hasSessionOnThisDay = false;
-                        if (foundStatuses.length > 0) {
-                            const nonEmpty = foundStatuses.filter(s => s !== "");
-                            const statusesToEval = nonEmpty.length > 0 ? nonEmpty : foundStatuses;
-
-                            // 메모 부분 제외, 맨 앞의 '태그' 부분만 추출해서 정확하게 비교
-                            const hasAbsence = statusesToEval.some(s => {
-                                const tagPart = s.split(',')[0].trim();
-                                return tagPart.includes("결석");
-                            });
-
-                            if (hasAbsence) {
-                                hasSessionOnThisDay = false;
-                            } else {
-                                const hasNumber = statusesToEval.some(s => {
-                                    const tagPart = s.split(',')[0].trim();
-                                    return /^[1-9]\d*/.test(tagPart);
-                                });
-
-                                if (hasNumber) {
-                                    hasSessionOnThisDay = true;
-                                } else {
-                                    const isCanceled = statusesToEval.some(s => {
-                                        const tagPart = s.split(',')[0].trim();
-                                        return tagPart.includes("취소") || tagPart.includes("선생님휴가") || tagPart.includes("휴가");
-                                    });
-                                    if (isCanceled) {
-                                        hasSessionOnThisDay = false;
-                                    } else if (colDate < realToday) {
-                                        hasSessionOnThisDay = true;
-                                    } else {
-                                        hasSessionOnThisDay = false;
-                                    }
-                                }
-                            }
-                        }
-                        // 출석한 날짜 기록
-                        if (hasSessionOnThisDay) {
-                            count++;
-                            attendedDatesForStudent.push(colDate);
-                        }
-                    }
-                    if (count > 0) results.push({ name: searchName, count: count, dates: attendedDatesForStudent });
-                });
-                return results.length > 0 ? results : null;
-            };
-
-            let currentGroup = '-'; let currentTeacherName = '이름없음'; let currentTime = '-';
-            for (let i = headerRowIndex + 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length < 2) continue;
-                let isNewTeacherBlock = false;
-                if (row[0] && row[0].trim() !== '') currentGroup = row[0].trim();
-                if (row[1] && row[1].trim() !== '') { currentTeacherName = row[1].trim(); isNewTeacherBlock = true; }
-                if (row[2] && row[2].trim() !== '') currentTime = row[2].trim();
-                const category = (row.length > 3 && row[3]) ? row[3].replace(/\s+/g, '') : '';
-                const isTargetRow = category === "대상" || category === "내용" || category === "활동" || (isNewTeacherBlock && category !== "장소" && !category.includes("진행여부"));
-
-                if (isTargetRow) {
-                    let locationRow = null; let statusRow = null;
-                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].replace(/\s+/g, '') === '장소') locationRow = data[i + 1];
-                    if (i + 1 < data.length && data[i + 1][3] && data[i + 1][3].includes('진행여부')) statusRow = data[i + 1];
-                    else if (i + 2 < data.length && data[i + 2][3] && data[i + 2][3].includes('진행여부')) statusRow = data[i + 2];
-
-                    dateColumns.forEach(dateInfo => {
-                        const colIdx = dateInfo.colIndex;
-                        const statusStr = (statusRow && statusRow.length > colIdx && statusRow[colIdx]) ? statusRow[colIdx].trim() : "";
-
-                        let safeStatusStr = String(statusStr).replace(/\s+/g, '');
-                        let teacherAttended = !safeStatusStr.includes('선생님휴가');
-
-                        let isAttended = false; let traineeCount = 0;
-                        if (statusStr) {
-                            const safeStatus = statusStr.replace(/\s+/g, '');
-                            if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || safeStatus.includes('휴가') || ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴'].some(kw => safeStatus.includes(kw)))) {
-                                const match = safeStatus.match(/^(\d+)/);
-                                if (match) { isAttended = true; traineeCount = parseInt(match[1], 10); }
-                            }
-                        }
-                        const cellVal = (row.length > colIdx && row[colIdx]) ? row[colIdx].trim() : "";
-                        const targetVal = cellVal === "" ? "-" : cellVal;
-                        const sessionCounts = getSessionCount(targetVal, colIdx);
-                        allData.push({
-                            team: teamName, group: currentGroup, date: dateInfo.dateStr,
-                            name: currentTeacherName, time: currentTime, target: targetVal,
-                            status: statusStr || "", isAttended, traineeCount, teacherAttended,
-                            location: (locationRow && locationRow.length > colIdx) ? locationRow[colIdx].trim() : "-",
-                            sessionCounts: sessionCounts,
-                            originalIndex: allData.length
-                        });
-                    });
-                }
-            }
-        }
-
-        async function loadDataFromGoogleSheets(urls, isSilent = false, isStartup = false) {
+        async function loadDataFromSupabase(isSilent = false, isStartup = false) {
             if (isFetching) return;
             isFetching = true;
 
@@ -976,52 +759,255 @@
 
             allData = [];
             window.scheduleDetailsMap = {};
-            const teamNames = ["1팀", "2팀", "3팀"];
-            const parsedResults = new Array(urls.length);
 
-            const fetchPromises = urls.map(async (url, i) => {
-                const csvUrl = getCsvUrl(url);
-                if (!csvUrl) return;
-                try {
-                    const res = await fetch(csvUrl);
-                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                    const text = await res.text();
-                    parsedResults[i] = text;
-                } catch (e) {
-                    console.error(`${teamNames[i]} 데이터를 불러오지 못했습니다.`, e);
-                    window.showToast(`${teamNames[i]} 데이터를 불러올 수 없습니다.<br><span class="text-sm font-normal opacity-90 mt-1 block">시트 권한 설정('링크가 있는 모든 사용자')을 확인해주세요.</span>`, true);
+            try {
+                // 1. teachers 정보 로드
+                const { data: teacherList, error: teacherError } = await window.supabaseClient
+                    .from('teachers')
+                    .select('name, team, group_name, seq_num');
+
+                const teacherGroupMap = {};
+                if (teacherList) {
+                    teacherList.forEach(t => {
+                        if (!teacherGroupMap[t.team]) teacherGroupMap[t.team] = {};
+                        teacherGroupMap[t.team][t.name] = {
+                            group_name: t.group_name || '',
+                            seq_num: t.seq_num !== null && t.seq_num !== undefined && t.seq_num !== '' ? parseInt(t.seq_num, 10) : 999
+                        };
+                    });
                 }
-            });
-            await Promise.all(fetchPromises);
 
-            parsedResults.forEach((text, i) => { if (text) processCSVText(text, teamNames[i]); });
+                // 2. daily_logs 전체 데이터 로드 (Range Pagination 우회)
+                const teamNames = ["1팀", "2팀", "3팀"];
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-            if (allData.length > 0 && !isValidDate(currentDateObj)) {
-                let forwardDate = getNextValidDate(currentDateObj, 1);
-                if (forwardDate.getTime() > currentDateObj.getTime()) {
-                    currentDateObj = forwardDate;
+                const fetchTeamRecords = async (teamName) => {
+                    let teamRecords = [];
+                    let from = 0;
+                    const step = 1000;
+                    let hasMore = true;
+
+                    while (hasMore) {
+                        const to = from + step - 1;
+                        const { data, error } = await window.supabaseClient
+                            .from('daily_logs')
+                            .select('*')
+                            .eq('team', teamName)
+                            .neq('student', '')
+                            .not('student', 'is', null)
+                            .lte('log_date', todayStr)
+                            .order('log_date', { ascending: false })
+                            .range(from, to);
+
+                        if (error) throw error;
+                        if (data && data.length > 0) {
+                            teamRecords = teamRecords.concat(data);
+                            if (data.length < step) {
+                                hasMore = false;
+                            } else {
+                                from += step;
+                            }
+                        } else {
+                            hasMore = false;
+                        }
+                    }
+                    return teamRecords;
+                };
+
+                const queryPromises = teamNames.map(teamName => fetchTeamRecords(teamName));
+                const results = await Promise.all(queryPromises);
+
+                let records = [];
+                results.forEach((teamRecords) => {
+                    if (teamRecords) records = records.concat(teamRecords);
+                });
+
+                // 3. 학생별 누적 출석 및 일자 계산 (Pre-compute)
+                const studentSessionMap = new Map();
+                const realToday = new Date();
+                realToday.setHours(0, 0, 0, 0);
+
+                records.forEach(row => {
+                    const studentVal = row.student || "";
+                    if (!studentVal || studentVal === "-") return;
+
+                    let cleanTarget = studentVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+
+                    names.forEach((searchName, nameIdx) => {
+                        if (!searchName || searchName === "학습" || searchName === "대상자" || searchName === "대상자없음" || searchName.includes("보조강사") || searchName.includes("자체학습") || searchName.includes("대상자발굴") || searchName.includes("도선복지관")) return;
+
+                        let finalStatus = row.status || "";
+                        if (names.length > 1 && finalStatus.includes('/')) {
+                            const rawParts = finalStatus.split(',');
+                            const firstPart = rawParts[0];
+                            const slashSegments = firstPart.split('/');
+
+                            if (slashSegments.length > 1 && slashSegments.length > nameIdx) {
+                                const myTag = slashSegments[nameIdx].trim();
+                                const memoPart = rawParts.slice(1).join(',').trim();
+                                finalStatus = myTag + (memoPart ? ', ' + memoPart : '');
+                            }
+                        }
+
+                        let hasSessionOnThisDay = false;
+                        const tagPart = finalStatus.split(',')[0].trim();
+                        if (finalStatus !== "") {
+                            if (tagPart.includes("결석")) {
+                                hasSessionOnThisDay = false;
+                            } else {
+                                if (/^[1-9]\d*/.test(tagPart)) {
+                                    hasSessionOnThisDay = true;
+                                } else {
+                                    const hasVacationMemo = (row.status || "").replace(/\s+/g, '').includes('선생님휴가');
+                                    if (tagPart.includes("취소") || ((tagPart.includes("선생님휴가") || tagPart.includes("휴가")) && hasVacationMemo)) {
+                                        hasSessionOnThisDay = false;
+                                    } else {
+                                        const logDate = new Date(row.log_date);
+                                        logDate.setHours(0, 0, 0, 0);
+                                        if (logDate < realToday) {
+                                            hasSessionOnThisDay = true;
+                                        } else {
+                                            hasSessionOnThisDay = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (hasSessionOnThisDay) {
+                            if (!studentSessionMap.has(searchName)) {
+                                studentSessionMap.set(searchName, new Map());
+                            }
+                            const dateObj = new Date(row.log_date);
+                            dateObj.setHours(0, 0, 0, 0);
+                            studentSessionMap.get(searchName).set(row.log_date, dateObj);
+                        }
+                    });
+                });
+
+                // 4. records를 allData 포맷으로 변환하여 채우기
+                records.forEach(row => {
+                    const logDate = new Date(row.log_date);
+                    const dateStr = `${logDate.getMonth() + 1}.${logDate.getDate()}`;
+
+                    let group = "-";
+                    let seqNum = 999;
+                    if (teacherGroupMap[row.team] && teacherGroupMap[row.team][row.teacher]) {
+                        group = teacherGroupMap[row.team][row.teacher].group_name;
+                        seqNum = teacherGroupMap[row.team][row.teacher].seq_num;
+                    } else if (TEACHER_GROUPS[row.team] && TEACHER_GROUPS[row.team][row.teacher]) {
+                        group = TEACHER_GROUPS[row.team][row.teacher];
+                    }
+
+                    const targetVal = row.student || "-";
+                    let cleanTarget = targetVal.replace(/대상자\s*없음/g, '-').replace(/대상자\s*발굴/g, '대상자발굴');
+                    const names = cleanTarget.split(/[/,\n]+/).map(s => s.trim().split('(')[0].trim()).filter(n => n.length > 0 && n !== '-');
+
+                    const sessionCounts = [];
+                    names.forEach(searchName => {
+                        const dateMap = studentSessionMap.get(searchName);
+                        if (dateMap) {
+                            const datesArr = Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime());
+                            sessionCounts.push({
+                                name: searchName,
+                                count: datesArr.length,
+                                dates: datesArr
+                            });
+                        }
+                    });
+
+                    let statusStr = row.status || "";
+                    let safeStatusStr = statusStr.replace(/\s+/g, '');
+                    const hasVacationMemo = (statusStr || "").replace(/\s+/g, '').includes('선생님휴가');
+                    let teacherAttended = !((safeStatusStr.includes('선생님휴가') || safeStatusStr.includes('휴가')) && hasVacationMemo);
+
+                    let isAttended = false;
+                    let traineeCount = 0;
+                    if (statusStr) {
+                        const safeStatus = statusStr.replace(/\s+/g, '');
+                        const hasVacationMemo = (statusStr || "").replace(/\s+/g, '').includes('선생님휴가');
+                        if (!(safeStatus.includes('결석') || safeStatus.includes('취소') || ((safeStatus.includes('선생님휴가') || safeStatus.includes('휴가')) && hasVacationMemo) || ['복지관이동', '복지관으로이동', '수업준비', '이동시간', '자체학습', '대상자발굴'].some(kw => safeStatus.includes(kw)))) {
+                            const match = safeStatus.match(/^(\d+)/);
+                            if (match) {
+                                isAttended = true;
+                                traineeCount = parseInt(match[1], 10);
+                            }
+                        }
+                    }
+
+                    allData.push({
+                        team: row.team,
+                        group: group,
+                        seq_num: seqNum,
+                        date: dateStr,
+                        name: row.teacher,
+                        time: row.shift,
+                        target: targetVal,
+                        status: statusStr,
+                        isAttended: isAttended,
+                        traineeCount: traineeCount,
+                        teacherAttended: teacherAttended,
+                        location: row.signature_url || row.location || "-",
+                        sessionCounts: sessionCounts.length > 0 ? sessionCounts : null,
+                        originalIndex: 0
+                    });
+                });
+
+                // 4.1 allData를 팀, 조, seq_num, 이름 순으로 정렬 후 originalIndex 부여
+                const teamOrder = { '1팀': 1, '2팀': 2, '3팀': 3 };
+                allData.sort((a, b) => {
+                    const teamA = teamOrder[a.team] || 99;
+                    const teamB = teamOrder[b.team] || 99;
+                    if (teamA !== teamB) return teamA - teamB;
+
+                    const groupA = a.group || '';
+                    const groupB = b.group || '';
+                    if (groupA !== groupB) {
+                        return groupA.localeCompare(groupB, 'ko');
+                    }
+
+                    const seqA = a.seq_num !== undefined && a.seq_num !== null ? a.seq_num : 999;
+                    const seqB = b.seq_num !== undefined && b.seq_num !== null ? b.seq_num : 999;
+                    if (seqA !== seqB) return seqA - seqB;
+
+                    return (a.name || '').localeCompare(b.name || '', 'ko');
+                });
+
+                allData.forEach((item, idx) => {
+                    item.originalIndex = idx;
+                });
+
+                if (allData.length > 0 && !isValidDate(currentDateObj)) {
+                    let forwardDate = getNextValidDate(currentDateObj, 1);
+                    if (forwardDate.getTime() > currentDateObj.getTime()) {
+                        currentDateObj = forwardDate;
+                    } else {
+                        currentDateObj = getNextValidDate(currentDateObj, -1);
+                    }
+                    updateDateUI();
+                }
+
+                dateNavigation.classList.remove('hidden');
+                renderDashboard();
+
+            } catch (e) {
+                console.error("Supabase 데이터 로드 에러:", e);
+                window.showToast("Supabase에서 데이터를 불러오지 못했습니다.<br><span class='text-sm font-normal opacity-90 mt-1 block'>인터넷 연결 및 설정을 확인해주세요.</span>", true);
+            } finally {
+                isFetching = false;
+                if (!isSilent) {
+                    globalLoader.classList.add('hidden');
+                    globalLoader.classList.remove('flex');
                 } else {
-                    currentDateObj = getNextValidDate(currentDateObj, -1);
+                    setTimeout(() => {
+                        syncIndicator.style.opacity = "0";
+                        const refreshMsg = document.getElementById('refreshMsg');
+                        if (refreshMsg) refreshMsg.style.opacity = "0";
+                    }, 1000);
                 }
-                updateDateUI();
             }
-
-            dateNavigation.classList.remove('hidden');
-            renderDashboard();
-            isFetching = false;
-
-            if (!isSilent) {
-                globalLoader.classList.add('hidden');
-                globalLoader.classList.remove('flex');
-            } else {
-                setTimeout(() => {
-                    syncIndicator.style.opacity = "0";
-                    const refreshMsg = document.getElementById('refreshMsg');
-                    if (refreshMsg) refreshMsg.style.opacity = "0";
-                }, 1000);
-            }
-
-            // 통계 전송 로직이 완전히 삭제되었습니다.
         }
 
         function prepareDailyData(targetM, targetD) {
@@ -1054,7 +1040,8 @@
                     teacherVisibilityMap.set(tKey, true);
                 } else {
                     if (tText !== '-' && tText !== '') teacherVisibilityMap.set(tKey, true);
-                    if (sText.includes('휴가')) teacherVisibilityMap.set(tKey, true);
+                    const hasVacationMemo = (item.status || "").replace(/\s+/g, '').includes('선생님휴가');
+                    if ((sText.includes('선생님휴가') || sText.includes('휴가')) && hasVacationMemo) teacherVisibilityMap.set(tKey, true);
                 }
             });
 
@@ -1100,7 +1087,8 @@
                     let tData = teacherStatusMap.get(item.name);
                     if (rawStatus) {
                         const checkStr = rawStatus.replace(/\s+/g, '');
-                        if (checkStr.includes('선생님휴가')) {
+                        const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                        if ((checkStr.includes('선생님휴가') || checkStr.includes('휴가')) && hasVacationMemo) {
                             tData.status = '휴가'; // 휴가는 가장 높은 우선순위
                         } else if (checkStr !== '' && checkStr !== '-' && tData.status !== '휴가') {
                             tData.status = '출근_확정';
@@ -1148,7 +1136,7 @@
                             parts.forEach(p => {
                                 if (p.includes('취소')) {
                                     stat_sCancel++;
-                                } else if (p.includes('휴가')) {
+                                } else if (p.includes('휴가') && (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가')) {
                                     stat_sVacation++;
                                 } else if (p.includes('결석')) {
                                     stat_sAbsent++;
@@ -1175,7 +1163,8 @@
                             const firstNum = match ? parseInt(match[0], 10) : 0;
                             let countAbsentStr = (stat_pStr.match(/결석/g) || []).length;
                             let countCancelStr = (stat_pStr.match(/취소/g) || []).length;
-                            let countVacationStr = (stat_pStr.match(/휴가/g) || []).length;
+                            const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                            let countVacationStr = hasVacationMemo ? (stat_pStr.match(/휴가/g) || []).length : 0;
 
                             if (stat_pStr.includes("취소") && stat_pStr.includes("결석")) {
                                 if (stat_sCount === 1) {
@@ -1198,7 +1187,7 @@
                             } else if (stat_pStr.includes("결석")) {
                                 if (match && stat_sCount > firstNum) { stat_sAttend = firstNum; stat_sAbsent = stat_sCount - firstNum; }
                                 else { stat_sAbsent = stat_sCount; }
-                            } else if (stat_pStr.includes("휴가")) {
+                            } else if (stat_pStr.includes("휴가") && hasVacationMemo) {
                                 if (/^1/.test(stat_pStr.trim())) {
                                     stat_sAttend = 1;
                                     stat_sVacation = stat_sCount === 1 ? 1 : stat_sCount - 1;
@@ -1632,11 +1621,21 @@
                 const isToday = currentDateObj.getFullYear() === now.getFullYear() && currentDateObj.getMonth() === now.getMonth() && currentDateObj.getDate() === now.getDate();
                 const currentMins = now.getHours() * 60 + now.getMinutes();
 
-                for (const tKey in groupedForGrid[teamName]) {
+                const sortedTKeys = [];
+                listForGrid.forEach(item => {
+                    if (item.team === teamName) {
+                        const tKey = `${item.group}|${item.name}`;
+                        if (!sortedTKeys.includes(tKey)) {
+                            sortedTKeys.push(tKey);
+                        }
+                    }
+                });
+
+                sortedTKeys.forEach(tKey => {
                     const teacherClasses = groupedForGrid[teamName][tKey];
                     const groupName = teacherClasses[0].group; const teacherName = teacherClasses[0].name;
 
-                    teamHtml += `<div class="bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/10 overflow-hidden flex flex-col hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-shadow h-full w-full"><div class="${headerBgClass} py-[clamp(6px,0.8vw,10px)] px-[clamp(12px,1.2vw,20px)] border-b border-white/10 flex items-center justify-center text-white shadow-sm"><span class="font-black tracking-tighter leading-tight whitespace-nowrap text-[clamp(14px,1.3vw,20px)]">${groupName} <span class="ml-1 text-[1.2em] opacity-100">${teacherName}</span></span></div><div class="flex flex-col p-[clamp(6px,0.8vw,8px)] gap-[clamp(6px,0.8vw,8px)] bg-slate-900/50 flex-grow shadow-inner">`;
+                    teamHtml += `<div class="bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/10 overflow-hidden flex flex-col hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-shadow h-full w-full"><div class="${headerBgClass} py-[clamp(6px,0.8vw,10px)] px-[clamp(12px,1.2vw,20px)] border-b border-white/10 flex items-center justify-center text-white shadow-sm"><span class="font-black tracking-tighter leading-tight whitespace-nowrap text-[clamp(14px,1.3vw,20px)]">${groupName} <span class="ml-1 text-[1.2em] opacity-100">${teacherName}</span></span></div><div class="grid grid-rows-3 p-[clamp(6px,0.8vw,8px)] gap-[clamp(6px,0.8vw,8px)] bg-slate-900/50 flex-grow shadow-inner min-h-0">`;
 
                     const timeMap = new Map();
                     teacherClasses.forEach(it => {
@@ -1646,12 +1645,20 @@
                         if (!timeMap.has(tk) || (timeMap.get(tk).target === '-' && it.target !== '-')) timeMap.set(tk, it);
                     });
 
+                    const studentCardHeightClass = 'h-full min-h-[135px] w-full box-border';
+                    const emptyStudentCardHtml = `<div class="flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border border-slate-700 bg-slate-800/50 shadow-sm ${studentCardHeightClass}"></div>`;
                     let prevAssistantGrid = null;
                     ['slot1', 'slot2', 'slot3'].forEach((sk, idx) => {
                         const it = timeMap.get(sk);
                         if (it) {
                             let itRawStat = (it.status && it.status.trim() !== '-') ? it.status.trim() : '';
-                            let itTargetText = (it.target || "").trim(); let tDisp = itTargetText === '-' || itTargetText === '' ? '대상자 없음' : itTargetText;
+                            let itTargetText = (it.target || "").trim();
+                            let isEmptyTarget = itTargetText === '-' || itTargetText === '';
+                            if (isEmptyTarget) {
+                                teamHtml += emptyStudentCardHtml;
+                                return;
+                            }
+                            let tDisp = itTargetText;
 
                             let isConsecutiveAssistant = false;
                             if (tDisp.includes('보조강사')) {
@@ -1674,7 +1681,7 @@
 
                             let cBg = '';
                             if (cleanR.includes('휴가') || sVacation >= 1) cBg = 'bg-sky-500/30 border-sky-400/50';
-                            else if (tDisp === '대상자 없음' || tDisp.replace(/\s+/g, '').includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
+                            else if (isEmptyTarget || tDisp.replace(/\s+/g, '').includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
                             else if (sAttend >= 1) cBg = 'bg-indigo-500/20 border-indigo-400/50';
                             else if (sAbsent >= 1) cBg = 'bg-rose-500/20 border-rose-400/50';
                             else if (sCancel >= 1) cBg = 'bg-amber-500/20 border-amber-400/50';
@@ -1692,7 +1699,7 @@
                             let blinkHtml = isBlinking ? `<span class="w-[clamp(8px,1vw,12px)] h-[clamp(8px,1vw,12px)] rounded-full bg-red-500 animate-pulse inline-block ml-1.5 shadow-[0_0_5px_#ef4444]" title="현재 진행중"></span>` : '';
                             let isGridExcluded = isExcludedCondition(it, itTargetText);
                             let cleanTDispForCheck = tDisp.replace(/\s+/g, '');
-                            let isHideBadges = tDisp === '대상자 없음' || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습');
+                            let isHideBadges = isEmptyTarget || cleanTDispForCheck.includes('대상자발굴') || cleanTDispForCheck.includes('자체학습');
 
                             const makeStatBtnGrid = (label, count, activeBgClass) => {
                                 if (isHideBadges) return '';
@@ -1729,17 +1736,17 @@
 
                             window.scheduleDetailsMap[uid] = { ...it, displayStatus: dStatus, badgeClass: bClass, isExcluded: isGridExcluded, isConsecutiveAssistant: isConsecutiveAssistant };
 
-                            let displayStatusText = itRawStat || (cleanR.includes('휴가') ? '선생님휴가' : '-');
-                            let isStatusVisible = itRawStat || cleanR.includes('휴가');
+                            const hasVacationMemo = (it.status || "").replace(/\s+/g, '').includes('선생님휴가');
+                            let displayStatusText = itRawStat || ((cleanR.includes('휴가') && hasVacationMemo) ? '선생님휴가' : '-');
+                            let isStatusVisible = itRawStat || (cleanR.includes('휴가') && hasVacationMemo);
 
-                            teamHtml += `<div onclick="showScheduleDetail('${uid}')" class="cursor-pointer hover:opacity-80 active:scale-95 transition-all flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border shadow-sm ${cBg} h-[135px] flex-1 w-full">${topRowBtns}<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${it.time}</span>${blinkHtml}</div></div><div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${tDisp}${fullLocText}"><span class="truncate block w-full">${tDisp}${lHtml}</span></div><div class="truncate mt-0.5 leading-tight ${isStatusVisible ? dColor : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${displayStatusText}">${displayStatusText}</div></div>`;
+                            teamHtml += `<div onclick="showScheduleDetail('${uid}')" class="cursor-pointer hover:opacity-80 active:scale-95 transition-all flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border shadow-sm ${cBg} ${studentCardHeightClass} overflow-hidden">${topRowBtns}<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${it.time}</span>${blinkHtml}</div></div><div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${tDisp}${fullLocText}"><span class="truncate block w-full">${tDisp}${lHtml}</span></div><div class="truncate mt-0.5 leading-tight ${isStatusVisible ? dColor : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${displayStatusText}">${displayStatusText}</div></div>`;
                         } else {
-                            let tl = idx === 0 ? "9:30~ / 13:00~" : (idx === 1 ? "10:30~ / 14:00~" : "11:30~ / 15:00~");
-                            teamHtml += `<div class="flex flex-col px-[clamp(10px,1vw,14px)] py-[clamp(8px,1vw,12px)] rounded-lg border border-slate-700 bg-slate-800/50 shadow-sm h-[135px] flex-1 w-full"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-slate-500 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${tl}</span><span class="min-w-[clamp(48px,4vw,60px)] whitespace-nowrap shrink-0 text-center inline-block px-1.5 py-0.5 bg-slate-700/50 rounded-md border border-slate-600 font-black text-slate-400 shadow-sm leading-none text-[clamp(11px,1.0vw,14px)]">수업없음</span></div><div class="font-black text-slate-600 truncate mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)]">-</div><div class="font-bold truncate text-transparent select-none mt-0.5 leading-tight text-[clamp(11px,1.1vw,18px)]">-</div></div>`;
+                            teamHtml += emptyStudentCardHtml;
                         }
                     });
                     teamHtml += `</div></div>`;
-                }
+                });
                 teamHtml += `</div>`;
                 return teamHtml;
             };
@@ -1776,7 +1783,17 @@
                         else if (teamName === '2팀') { hBg = 'bg-emerald-900/60'; hBorder = 'border-emerald-500/50'; hText = 'text-emerald-100'; }
                         else if (teamName === '3팀') { hBg = 'bg-purple-900/60'; hBorder = 'border-purple-500/50'; hText = 'text-purple-100'; }
 
-                        for (let tKey in teamGroups[teamName]) {
+                        let sortedTKeys = [];
+                        list.forEach(item => {
+                            if (item.team === teamName) {
+                                let tKey = `${item.group}|${item.name}`;
+                                if (!sortedTKeys.includes(tKey)) {
+                                    sortedTKeys.push(tKey);
+                                }
+                            }
+                        });
+
+                        sortedTKeys.forEach(tKey => {
                             let tItems = teamGroups[teamName][tKey];
                             let validHtmlItems = [];
                             for (let item of tItems) {
@@ -1817,23 +1834,30 @@
 
                                 if (filterStr === '미확인' && topRowBtns === '') continue;
 
-                                let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                                let timeHtml = (item.time && item.time !== '-') ? `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>` : '';
                                 let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
                                 if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
                                 let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
-                                let nameHtml = `<div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${studentName}${locHtmlStr}"><span class="truncate block w-full">${studentName === '-' ? '대상자 없음' : studentName}${lHtml}</span></div>`;
+                                let displayStudentName = (studentName === '-' || studentName === '') ? '' : studentName;
+                                if (displayStudentName === '') {
+                                    let itemHtml = `<div class="bg-slate-800 border-slate-600 h-full min-h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border"></div>`;
+                                    validHtmlItems.push(itemHtml);
+                                    continue;
+                                }
+                                let nameHtml = `<div class="font-black text-slate-100 mt-0.5 leading-tight text-[clamp(14px,1.4vw,22px)] flex items-center overflow-hidden" title="${displayStudentName}${locHtmlStr}"><span class="truncate block w-full">${displayStudentName}${lHtml}</span></div>`;
 
                                 // 💡 '선생님휴가' 메모 텍스트 생성 로직
                                 let memoText = window.autoCorrectText(rawStatus);
                                 let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
                                 const isTeacherOnVacation = item.isTeacherVacation || false;
-                                if ((isTeacherOnVacation || rawStatus.replace(/\s+/g, '').includes('휴가')) && !cleanMemoText.includes('선생님휴가')) {
+                                const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                                if ((isTeacherOnVacation || (rawStatus.replace(/\s+/g, '').includes('휴가') && hasVacationMemo)) && !cleanMemoText.includes('선생님휴가')) {
                                     cleanMemoText = cleanMemoText ? '선생님휴가 ' + cleanMemoText : '선생님휴가';
                                 }
 
                                 let memoColorClass = 'text-indigo-300';
                                 const rawStatusCheck2 = rawStatus.replace(/\s+/g, '');
-                                if (rawStatusCheck2.includes('선생님휴가') || isTeacherOnVacation || rawStatusCheck2.includes('휴가')) memoColorClass = 'text-sky-400 font-bold';
+                                if (rawStatusCheck2.includes('선생님휴가') || isTeacherOnVacation || (rawStatusCheck2.includes('휴가') && hasVacationMemo)) memoColorClass = 'text-sky-400 font-bold';
                                 else if (rawStatusCheck2.includes('결석') || rawStatusCheck2.includes('취소') || isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
 
                                 // 💡 여기서 정상적으로 메모가 만들어짐
@@ -1841,18 +1865,18 @@
                                 let memoHtml = `<div class="truncate mt-0.5 leading-tight ${isMemoVisible ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
 
                                 if (isHiddenBadge && filterStr !== '전체') {
-                                    nameHtml = `<div class="w-full flex flex-col items-center justify-center font-black text-[clamp(14px,1.4vw,20px)] text-slate-300 h-full py-1"><span class="text-center w-full truncate">${studentName === '-' ? '대상자 없음' : studentName}</span></div>`;
+                                    nameHtml = `<div class="w-full flex flex-col items-center justify-center font-black text-[clamp(14px,1.4vw,20px)] text-slate-300 h-full py-1"><span class="text-center w-full truncate">${displayStudentName}</span></div>`;
                                     timeHtml = ''; memoHtml = '';
                                 }
 
                                 let cBg = '';
-                                if (rawStatus.replace(/\s+/g, '').includes('휴가') || sVacation >= 1) cBg = 'bg-sky-900/50 border-sky-800/50';
+                                if ((rawStatus.replace(/\s+/g, '').includes('휴가') && hasVacationMemo) || sVacation >= 1) cBg = 'bg-sky-900/50 border-sky-800/50';
                                 else if (studentName === '-' || cleanStudentNameForCheck.includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
                                 else if (sAttend >= 1) cBg = 'bg-indigo-900 border-indigo-800'; else if (sAbsent >= 1) cBg = 'bg-[#3b1a20] border-[#5c2a33]'; else if (sCancel >= 1) cBg = 'bg-amber-900 border-amber-800'; else cBg = 'bg-slate-700 border-slate-600';
 
                                 // ✅ 선생님 이름이 나오는 하단 줄 제거, 높이 h-[150px] 대신 h-auto 사용
                                 let cardContentHtml = topRowBtns + timeHtml + nameHtml + (!isHiddenBadge || filterStr === '전체' ? memoHtml : '');
-                                let itemHtml = `<div class="${cBg} h-auto px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto">${cardContentHtml}</div>`;
+                                let itemHtml = `<div class="${cBg} h-full min-h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border">${cardContentHtml}</div>`;
                                 validHtmlItems.push(itemHtml);
                             }
 
@@ -1861,11 +1885,11 @@
                                 let groupText = `${tItems[0].group} <span class="text-[1.2em] ml-1">${tItems[0].name}</span>`;
                                 for (let i = 0; i < validHtmlItems.length; i += 3) {
                                     let chunkHtmlArray = validHtmlItems.slice(i, i + 3);
-                                    let cardsHtml = chunkHtmlArray.join('<div class="h-3"></div>');
-                                    teamCardsHtml += `<div class="bg-slate-800 border border-slate-600 p-[clamp(8px,1vw,12px)] rounded-lg flex flex-col h-full overflow-hidden"><div class="font-black ${hText} text-[clamp(14px,1.2vw,18px)] border-b-2 ${hBorder} pb-1.5 mb-2 text-center ${hBg} rounded pt-1">${groupText}</div><div class="flex flex-col flex-grow justify-start items-center w-full">${cardsHtml}</div></div>`;
+                                    let cardsHtml = `<div class="grid grid-cols-1 auto-rows-fr gap-[clamp(6px,0.8vw,8px)] w-full flex-grow">${chunkHtmlArray.join('')}</div>`;
+                                    teamCardsHtml += `<div class="bg-slate-800 border border-slate-600 p-[clamp(8px,1vw,12px)] rounded-lg flex flex-col h-full overflow-hidden"><div class="font-black ${hText} text-[clamp(14px,1.2vw,18px)] border-b-2 ${hBorder} pb-1.5 mb-2 text-center ${hBg} rounded pt-1">${groupText}</div>${cardsHtml}</div>`;
                                 }
                             }
-                        }
+                        });
 
                         teamCardsHtml += `</div>`;
 
@@ -1918,7 +1942,8 @@
                             let sAttend = item.statAttend || 0; let sAbsent = item.statAbsent || 0; let sCancel = item.statCancel || 0; let sVacation = item.statVacation || 0; let sUnconfirmed = item.statUnconfirmed || 0;
 
                             let cleanStudentNameForCheck = studentName.replace(/\s+/g, '');
-                            let isHideBadgesModal = cleanStudentNameForCheck.includes('대상자발굴') || cleanStudentNameForCheck.includes('자체학습') || rawStatus.replace(/\s+/g, '').includes('휴가');
+                            const hasVacationMemo = (rawStatus || "").replace(/\s+/g, '').includes('선생님휴가');
+                            let isHideBadgesModal = cleanStudentNameForCheck.includes('대상자발굴') || cleanStudentNameForCheck.includes('자체학습') || ((rawStatus.replace(/\s+/g, '').includes('휴가') || rawStatus.replace(/\s+/g, '').includes('선생님휴가')) && hasVacationMemo);
 
                             const makeStatBtnModal = (label, count, activeBgClass) => {
                                 if (isHideBadgesModal || count < 1) return '';
@@ -1942,7 +1967,7 @@
                                 if (allBtnsHtml !== '') topRowBtns = `<div class="flex flex-wrap gap-0.5 w-full mb-1.5">${allBtnsHtml}</div>`;
                             }
 
-                            let timeHtml = `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>`;
+                            let timeHtml = (item.time && item.time !== '-') ? `<div class="flex justify-between items-center mb-0.5"><div class="flex items-center"><span class="font-bold text-slate-300 leading-tight text-[clamp(11px,1vw,16px)] whitespace-nowrap shrink-0">${item.time}</span></div></div>` : '';
                             let locHtmlStr = item.location === '-' || item.location === '' ? '' : item.location;
                             if (locHtmlStr && locHtmlStr.includes('복지관')) locHtmlStr = '';
                             let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
@@ -1950,8 +1975,13 @@
 
                             let memoText = window.autoCorrectText(rawStatus);
                             let cleanMemoText = memoText.replace(/\s+/g, ' ').trim();
+                            const isTeacherOnVacation = item.isTeacherVacation || false;
+                            if ((isTeacherOnVacation || ((rawStatus.replace(/\s+/g, '').includes('휴가') || rawStatus.replace(/\s+/g, '').includes('선생님휴가')) && hasVacationMemo)) && !cleanMemoText.includes('선생님휴가')) {
+                                cleanMemoText = cleanMemoText ? '선생님휴가 ' + cleanMemoText : '선생님휴가';
+                            }
+
                             let memoColorClass = 'text-indigo-300';
-                            if (rawStatus.replace(/\s+/g, '').includes('선생님휴가')) memoColorClass = 'text-slate-400';
+                            if (rawStatus.replace(/\s+/g, '').includes('선생님휴가') || isTeacherOnVacation || ((rawStatus.replace(/\s+/g, '').includes('휴가') || rawStatus.replace(/\s+/g, '').includes('선생님휴가')) && hasVacationMemo)) memoColorClass = 'text-sky-400 font-bold';
                             else if (rawStatus.replace(/\s+/g, '').includes('결석') || rawStatus.replace(/\s+/g, '').includes('취소') || item.isPartial || sAbsent >= 1 || sCancel >= 1) memoColorClass = 'text-rose-400 font-bold';
                             let memoHtml = `<div class="truncate mt-0.5 leading-tight ${cleanMemoText ? memoColorClass : 'text-transparent select-none font-bold'} text-[clamp(11px,1.1vw,18px)]" title="${cleanMemoText}">${cleanMemoText || '-'}</div>`;
 
@@ -1961,7 +1991,7 @@
                             }
 
                             let cBg = '';
-                            if (rawStatus.replace(/\s+/g, '').includes('휴가') || sVacation >= 1) cBg = 'bg-sky-900/50 border-sky-800/50';
+                            if (((rawStatus.replace(/\s+/g, '').includes('휴가') || rawStatus.replace(/\s+/g, '').includes('선생님휴가')) && hasVacationMemo) || sVacation >= 1) cBg = 'bg-sky-900/50 border-sky-800/50';
                             else if (sAttend >= 1) cBg = 'bg-indigo-900 border-indigo-800'; else if (sAbsent >= 1) cBg = 'bg-[#3b1a20] border-[#5c2a33]'; else if (sCancel >= 1) cBg = 'bg-amber-900 border-amber-800'; else cBg = 'bg-slate-700 border-slate-600';
 
                             // ✅ 선생님 이름이 나오는 하단 줄 제거, 높이 h-[150px] 대신 h-auto 사용
