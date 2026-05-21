@@ -1795,6 +1795,13 @@
 
                         sortedTKeys.forEach(tKey => {
                             let tItems = teamGroups[teamName][tKey];
+                            // 💡 1. 수업시간대 순으로 카드 배열 정렬 (사전순 비교의 한계를 극복하기 위해 시간(분) 단위로 계산)
+                            const parseTime = (t) => {
+                                if (!t || t === '-') return 9999;
+                                const m = t.match(/(\d+):(\d+)/);
+                                return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 9999;
+                            };
+                            tItems.sort((a, b) => parseTime(a.time) - parseTime(b.time));
                             let validHtmlItems = [];
                             for (let item of tItems) {
                                 let studentName = item.target;
@@ -1840,7 +1847,8 @@
                                 let lHtml = locHtmlStr === '' ? '' : ` <span class="text-[clamp(11px,1vw,14px)] font-bold text-slate-400">(${locHtmlStr})</span>`;
                                 let displayStudentName = (studentName === '-' || studentName === '') ? '' : studentName;
                                 if (displayStudentName === '') {
-                                    let itemHtml = `<div class="bg-slate-800 border-slate-600 h-full min-h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border"></div>`;
+                                    // 💡 2. 카드 높이를 일정하게 고정 (h-[135px])
+                                    let itemHtml = `<div class="bg-slate-800 border-slate-600 h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border"></div>`;
                                     validHtmlItems.push(itemHtml);
                                     continue;
                                 }
@@ -1874,9 +1882,9 @@
                                 else if (studentName === '-' || cleanStudentNameForCheck.includes('자체학습')) cBg = 'bg-slate-800 border-slate-600';
                                 else if (sAttend >= 1) cBg = 'bg-indigo-900 border-indigo-800'; else if (sAbsent >= 1) cBg = 'bg-[#3b1a20] border-[#5c2a33]'; else if (sCancel >= 1) cBg = 'bg-amber-900 border-amber-800'; else cBg = 'bg-slate-700 border-slate-600';
 
-                                // ✅ 선생님 이름이 나오는 하단 줄 제거, 높이 h-[150px] 대신 h-auto 사용
+                                // ✅ 선생님 이름이 나오는 하단 줄 제거, 카드 크기 일정하게 유지 위해 h-[135px] 고정
                                 let cardContentHtml = topRowBtns + timeHtml + nameHtml + (!isHiddenBadge || filterStr === '전체' ? memoHtml : '');
-                                let itemHtml = `<div class="${cBg} h-full min-h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border">${cardContentHtml}</div>`;
+                                let itemHtml = `<div class="${cBg} h-[135px] px-[clamp(12px,1.5vw,20px)] py-[clamp(10px,1vw,14px)] rounded-xl border flex flex-col justify-start w-full overflow-hidden text-left mx-auto box-border">${cardContentHtml}</div>`;
                                 validHtmlItems.push(itemHtml);
                             }
 
@@ -1885,7 +1893,8 @@
                                 let groupText = `${tItems[0].group} <span class="text-[1.2em] ml-1">${tItems[0].name}</span>`;
                                 for (let i = 0; i < validHtmlItems.length; i += 3) {
                                     let chunkHtmlArray = validHtmlItems.slice(i, i + 3);
-                                    let cardsHtml = `<div class="grid grid-cols-1 auto-rows-fr gap-[clamp(6px,0.8vw,8px)] w-full flex-grow">${chunkHtmlArray.join('')}</div>`;
+                                    // 💡 2. auto-rows-fr과 flex-grow를 제거하여 카드가 세로로 늘어나지 않게 함
+                                    let cardsHtml = `<div class="flex flex-col gap-[clamp(6px,0.8vw,8px)] w-full">${chunkHtmlArray.join('')}</div>`;
                                     teamCardsHtml += `<div class="bg-slate-800 border border-slate-600 p-[clamp(8px,1vw,12px)] rounded-lg flex flex-col h-full overflow-hidden"><div class="font-black ${hText} text-[clamp(14px,1.2vw,18px)] border-b-2 ${hBorder} pb-1.5 mb-2 text-center ${hBg} rounded pt-1">${groupText}</div>${cardsHtml}</div>`;
                                 }
                             }

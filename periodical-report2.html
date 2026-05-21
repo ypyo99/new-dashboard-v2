@@ -923,13 +923,16 @@
                 // 1. teachers 정보 로드
                 const { data: teacherList } = await window.supabaseClient
                     .from('teachers')
-                    .select('name, team, group_name');
+                    .select('name, team, group_name, seq_num');
 
                 const teacherGroupMap = {};
                 if (teacherList) {
                     teacherList.forEach(t => {
                         if (!teacherGroupMap[t.team]) teacherGroupMap[t.team] = {};
-                        teacherGroupMap[t.team][t.name] = t.group_name;
+                        teacherGroupMap[t.team][t.name] = {
+                            group_name: t.group_name,
+                            seq_num: t.seq_num !== null && t.seq_num !== undefined && t.seq_num !== '' ? parseInt(t.seq_num, 10) : 999
+                        };
                     });
                 }
 
@@ -1026,8 +1029,10 @@
                     const dateStr = `${mm}.${dd}`;
 
                     let group = "-";
+                    let seqNum = 999;
                     if (teacherGroupMap[row.team] && teacherGroupMap[row.team][row.teacher]) {
-                        group = teacherGroupMap[row.team][row.teacher];
+                        group = teacherGroupMap[row.team][row.teacher].group_name;
+                        seqNum = teacherGroupMap[row.team][row.teacher].seq_num;
                     }
 
                     const targetVal = row.student || "-";
@@ -1061,6 +1066,7 @@
 
                     allData.push({
                         team: row.team, group: group, date: dateStr, dateObj: logDateObj,
+                        seq_num: seqNum,
                         name: window.autoCorrectText(row.teacher || "이름없음"),
                         time: row.shift || "",
                         target: window.autoCorrectText(targetVal),
@@ -2361,8 +2367,30 @@
             const buildHtml = (list, type, filterStr) => {
                 if (list.length === 0) return '<div class="text-center py-20 text-slate-400 text-[clamp(14px,1.2vw,20px)]">데이터가 없습니다.</div>';
 
-                // 💡 날짜순(과거 -> 최신)으로 정렬
-                list.sort((a, b) => (a.dateObj && b.dateObj) ? a.dateObj - b.dateObj : 0);
+                // 💡 날짜별 -> 팀 -> 조 -> seq_num -> 수업시간 순으로 다단계 정렬
+                const parseTime = (t) => {
+                    if (!t || t === '-') return 9999;
+                    const m = t.match(/(\d+):(\d+)/);
+                    return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 9999;
+                };
+
+                list.sort((a, b) => {
+                    let dDiff = (a.dateObj && b.dateObj) ? a.dateObj - b.dateObj : 0;
+                    if (dDiff !== 0) return dDiff;
+
+                    let tDiff = (a.team || '').localeCompare(b.team || '');
+                    if (tDiff !== 0) return tDiff;
+
+                    let gDiff = (a.group || '').localeCompare(b.group || '');
+                    if (gDiff !== 0) return gDiff;
+
+                    let sNumA = a.seq_num !== undefined && a.seq_num !== null ? a.seq_num : 999;
+                    let sNumB = b.seq_num !== undefined && b.seq_num !== null ? b.seq_num : 999;
+                    let sDiff = sNumA - sNumB;
+                    if (sDiff !== 0) return sDiff;
+
+                    return parseTime(a.time) - parseTime(b.time);
+                });
 
                 let html = '';
                 const gridClass = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-[clamp(8px,1vw,14px)]';
