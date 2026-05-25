@@ -498,10 +498,9 @@
         let isFetching = false;
         let currentDateObj = new Date();
         window.scheduleDetailsMap = {};
+        window.holidayList = []; // 공휴일 목록을 저장할 전역 변수 추가
 
         currentDateObj.setHours(0, 0, 0, 0);
-        if (currentDateObj.getDay() === 6) currentDateObj.setDate(currentDateObj.getDate() + 2);
-        else if (currentDateObj.getDay() === 0) currentDateObj.setDate(currentDateObj.getDate() + 1);
 
         const SUPABASE_URL = 'https://oudrcfxkneopgtcfbwhd.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91ZHJjZnhrbmVvcGd0Y2Zid2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNzk0MTYsImV4cCI6MjA5NDY1NTQxNn0.ovAp6X3VogCeyKa74pC3x2f4lKR6m3gkE0kEEhJbGpQ';
@@ -548,6 +547,20 @@
         const globalLoader = document.getElementById('globalLoader');
 
         let currentOpenCategory = null;
+
+        // ✅ 주말 또는 공휴일인지 확인하는 함수
+        function isWeekendOrHoliday(d) {
+            const day = d.getDay();
+            if (day === 0 || day === 6) return true; // 주말
+
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${mm}-${dd}`;
+
+            if (window.holidayList && window.holidayList.includes(dateStr)) return true; // 공휴일
+
+            return false;
+        }
 
         // ✅ 학생 회차 모달 함수
         window.showSessionModal = function (event, originalIndex, studentName) {
@@ -713,8 +726,8 @@
                 let selectedDate = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
                 selectedDate.setHours(0, 0, 0, 0);
 
-                if (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) {
-                    window.showToast("주말(토, 일요일)은 선택할 수 없습니다.", true);
+                if (isWeekendOrHoliday(selectedDate)) {
+                    window.showToast("주말 및 공휴일은 선택할 수 없습니다.", true);
                     updateDateUI(); // 다시 원래 날짜로 복구
                     return;
                 }
@@ -722,7 +735,7 @@
                 if (!isValidDate(selectedDate)) {
                     let direction = selectedDate > currentDateObj ? 1 : -1;
                     selectedDate = getNextValidDate(selectedDate, direction);
-                    window.showToast("선택한 날짜가 시트에 없거나 공휴일이어서 유효한 날짜로 이동했습니다.", false);
+                    window.showToast("선택한 날짜에 교육 데이터가 없어서 유효한 날짜로 이동했습니다.", false);
                 }
 
                 currentDateObj = selectedDate;
@@ -776,6 +789,26 @@
                             group_name: t.group_name || '',
                             seq_num: t.seq_num !== null && t.seq_num !== undefined && t.seq_num !== '' ? parseInt(t.seq_num, 10) : 999
                         };
+                    });
+                }
+
+                // 1.5. holidays 정보 로드
+                const { data: holidayData, error: holidayError } = await window.supabaseClient
+                    .from('holidays')
+                    .select('*');
+
+                window.holidayList = [];
+                if (holidayData) {
+                    holidayData.forEach(h => {
+                        Object.values(h).forEach(val => {
+                            if (typeof val === 'string') {
+                                const trimVal = val.trim();
+                                // "05-25" 형태의 문자열만 추출하여 저장
+                                if (/^\d{2}-\d{2}$/.test(trimVal)) {
+                                    window.holidayList.push(trimVal);
+                                }
+                            }
+                        });
                     });
                 }
 
@@ -981,7 +1014,8 @@
                     item.originalIndex = idx;
                 });
 
-                if (allData.length > 0 && !isValidDate(currentDateObj)) {
+                // 앱 초기 진입 시(데이터 로드 후) 현재 날짜가 유효하지 않거나 주말/공휴일이면 유효한 평일로 보정
+                if (allData.length > 0 && (!isValidDate(currentDateObj) || isWeekendOrHoliday(currentDateObj))) {
                     let forwardDate = getNextValidDate(currentDateObj, 1);
                     if (forwardDate.getTime() > currentDateObj.getTime()) {
                         currentDateObj = forwardDate;
@@ -2150,7 +2184,7 @@
             }
         });
 
-        // ✅ 날짜 유효성 검사 (시트에 없거나 공휴일인지 확인)
+        // ✅ 날짜 유효성 검사 (시트에 데이터가 있는지 확인)
         function isValidDate(d) {
             if (allData.length === 0) return true;
             const m = d.getMonth() + 1;
@@ -2172,15 +2206,15 @@
             let limit = 30; // 최대 30일 탐색
             while (limit > 0) {
                 temp.setDate(temp.getDate() + direction);
-                if (temp.getDay() !== 0 && temp.getDay() !== 6 && isValidDate(temp)) {
+                if (!isWeekendOrHoliday(temp) && isValidDate(temp)) {
                     return temp;
                 }
                 limit--;
             }
-            // 30일 이내에 데이터가 있는 날짜를 못 찾았을 경우, 평일 기준 다음/이전 날짜로 이동 허용
+            // 30일 이내에 데이터가 있는 날짜를 못 찾았을 경우, 평일(공휴일 제외) 기준 다음/이전 날짜로 이동 허용
             let fallback = new Date(d);
             fallback.setDate(fallback.getDate() + direction);
-            while (fallback.getDay() === 0 || fallback.getDay() === 6) {
+            while (isWeekendOrHoliday(fallback)) {
                 fallback.setDate(fallback.getDate() + direction);
             }
             return fallback;
@@ -2203,8 +2237,11 @@
         document.getElementById('todayBtn').onclick = () => {
             let today = new Date();
             today.setHours(0, 0, 0, 0);
-            if (today.getDay() === 6) today.setDate(today.getDate() + 2);
-            else if (today.getDay() === 0) today.setDate(today.getDate() + 1);
+
+            // 오늘이 주말이나 공휴일이면 다음 날짜로 넘어감
+            while (isWeekendOrHoliday(today)) {
+                today.setDate(today.getDate() + 1);
+            }
 
             if (!isValidDate(today)) {
                 let forwardDate = getNextValidDate(today, 1);
@@ -2253,10 +2290,10 @@
             // X축(가로) 이동 거리가 Y축(세로) 이동 거리보다 크고, 최소 50px 이상 이동했을 때만 스와이프 인식 (오작동 방지)
             if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
                 if (diffX > 0) {
-                    // 오른쪽으로 스와이프 -> 이전 날짜 (어제 혹은 지난 금요일)
+                    // 오른쪽으로 스와이프 -> 이전 날짜 (어제 혹은 지난 금요일/공휴일 이전)
                     goToPrevDay();
                 } else {
-                    // 왼쪽으로 스와이프 -> 다음 날짜 (내일 혹은 다음 월요일)
+                    // 왼쪽으로 스와이프 -> 다음 날짜 (내일 혹은 다음 월요일/공휴일 이후)
                     goToNextDay();
                 }
             }
