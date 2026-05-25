@@ -710,7 +710,7 @@
             datePickerInput.addEventListener('change', (e) => {
                 if (!e.target.value) return;
                 const parts = e.target.value.split('-');
-                const selectedDate = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                let selectedDate = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
                 selectedDate.setHours(0, 0, 0, 0);
 
                 if (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) {
@@ -792,13 +792,13 @@
 
                     while (hasMore) {
                         const to = from + step - 1;
+                        // 형이 요청한 부분 수정: .lte('log_date', todayStr) 조건을 삭제해서 미래 날짜도 전부 불러오도록 수정했어!
                         const { data, error } = await window.supabaseClient
                             .from('daily_logs')
                             .select('*')
                             .eq('team', teamName)
                             .neq('student', '')
                             .not('student', 'is', null)
-                            .lte('log_date', todayStr)
                             .order('log_date', { ascending: false })
                             .range(from, to);
 
@@ -2177,7 +2177,13 @@
                 }
                 limit--;
             }
-            return d; // 못 찾으면 원래 날짜 반환
+            // 30일 이내에 데이터가 있는 날짜를 못 찾았을 경우, 평일 기준 다음/이전 날짜로 이동 허용
+            let fallback = new Date(d);
+            fallback.setDate(fallback.getDate() + direction);
+            while (fallback.getDay() === 0 || fallback.getDay() === 6) {
+                fallback.setDate(fallback.getDate() + direction);
+            }
+            return fallback;
         }
 
         // ✅ 날짜 변경 로직을 함수로 분리 (버튼 및 스와이프 기능에서 공통으로 사용)
